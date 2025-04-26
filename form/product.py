@@ -5,10 +5,10 @@ from wtforms.validators import DataRequired
 
 
 class ProductForm(FlaskForm):
-    name = StringField('Product name', validators=[DataRequired()])
-    price = FloatField('Price', validators=[DataRequired()])
-    description = TextAreaField('Description')
-    image = FileField('Product image', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
-    amount_available = IntegerField('Amount available')
-    open = BooleanField('Open product for all', default=False)
-    submit = SubmitField('Submit')
+    name = StringField('Название', validators=[DataRequired()])
+    price = FloatField('Цена', validators=[DataRequired()])
+    description = TextAreaField('Описание')
+    image = FileField('Изображение продукта', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
+    amount_available = IntegerField('Количество товара')
+    open = BooleanField('Открытый товар для всех', default=False)
+    submit = SubmitField('Добавить')

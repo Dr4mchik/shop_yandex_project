@@ -21,21 +21,21 @@
             <ul class="navbar-nav me-auto mb-2 mb-md-0">
 
               <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/">Home</a>
+                <a class="nav-link active" aria-current="page" href="/">Главная</a>
               </li>
                 {% if not current_user.is_authenticated %}
                 <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/register">Register</a>
+                <a class="nav-link active" aria-current="page" href="/register">Регистрация</a>
               </li>
                 <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="/login">Login</a>
+                <a class="nav-link active" aria-current="page" href="/login">Авторизация</a>
               </li>
                 {% else %}
                 <li class="nav-item">
-                <a class="nav-link active" href="/user/products">Your products</a>
+                <a class="nav-link active" href="/user/products">Ваши продукты</a>
               </li>
                 <li class="nav-item">
-                <a class="nav-link active" href="/user/products/add">Add product</a>
+                <a class="nav-link active" href="/user/products/add">Добавить продукт</a>
               </li>
                 {% endif %}
             </ul>
