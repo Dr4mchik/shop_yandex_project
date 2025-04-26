@@ -9,7 +9,7 @@
       {{ form.hidden_tag() }}
       
       <div class="mb-3">
-        {{ form.name.label(class="form-label") }}
+        {{ form.name.label }}
         {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
         {% for error in form.name.errors %}
         <div class="invalid-feedback">{{ error }}</div>
@@ -17,7 +17,7 @@
       </div>
 
       <div class="mb-3">
-        {{ form.price.label(class="form-label") }}
+        {{ form.price.label }}
         <div class="input-group">
           {{ form.price(class="form-control" + (" is-invalid" if form.price.errors else "")) }}
           <span class="input-group-text">₽</span>
@@ -28,12 +28,12 @@
       </div>
 
       <div class="mb-3">
-        {{ form.description.label(class="form-label") }}
-        {{ form.description(class="form-control", rows=4) }}
+        {{ form.description.label }}
+        {{ form.description(class="form-control", rows=6) }}
       </div>
 
       <div class="mb-3">
-        {{ form.image.label(class="form-label") }}
+        {{ form.image.label }}
         {{ form.image(class="form-control") }}
         <div class="form-text">Разрешенные форматы: JPG, PNG</div>
         {% if form.image.errors %}

@@ -1,28 +1,30 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>Login Form</h1>
-<form action="" method="post">
-    {{ form.hidden_tag() }}
-    <p>
-        {{form.email.label}}<br>
-        {{form.email(class='form-control', type='email')}}<br>
-        {% for error in form.email.errors %}
-            <p class="alert alert-danger">
-                {{ error }}
-            </p>
-        {% endfor %}
-    </p>
-    <p>
-        {{form.password.label}}<br>
-        {{form.password(class='form-control', type='password')}}<br>
-        {% for error in form.password.errors %}
-            <p class="alert alert-danger">
-                {{ error }}
-            </p>
-        {% endfor %}
-    </p>
-    <p>{{form.submit(class='btn btn-primary', type='submit')}}</p>
-    {{message}}
-</form>
+<div class="col-md-6 mx-auto">
+    <h1 class="mb-4">Login Form</h1>
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            {{form.email.label}}<br>
+            {{form.email(class='form-control', type='email')}}<br>
+            {% for error in form.email.errors %}
+                <p class="alert alert-danger">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </div>
+        <p>
+            {{form.password.label}}<br>
+            {{form.password(class='form-control', type='password')}}<br>
+            {% for error in form.password.errors %}
+                <p class="alert alert-danger">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <p>{{form.submit(class='btn btn-primary w-50', type='submit')}}</p>
+        {{message}}
+    </form>
+</div>
 {% endblock %}
