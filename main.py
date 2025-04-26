@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, request
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user
 from werkzeug.utils import secure_filename
 import datetime
@@ -38,7 +38,15 @@ def logout():
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    db_sess = db_session.create_session()
+    # возьмём из аргументов в url параметр поиска, появится если пользователь что-то искал
+    search = request.args.get('search', '')
+    if search:
+        # если пользователь что-то ищёт, будем искать совпадение в названии товара
+        products = db_sess.query(Product).filter(Product.name.ilike(f'%{search}%')).all()
+    else:
+        products = db_sess.query(Product).all()
+    return render_template('all_products.html',  products=products)
 
 
 @app.route('/register', methods=['GET', 'POST'])
