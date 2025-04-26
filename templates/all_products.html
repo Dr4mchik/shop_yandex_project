@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1 class="mb-4">Каталог товаров</h1>
+
+    <!-- Форма поиска -->
+    <form method="GET" action="" class="mb-4">
+        <div class="input-group">
+            <input type="text" class="form-control"
+                   name="search"
+                   placeholder="Поиск по названию и описанию"
+                   value="{{ request.args.get('search', '') }}">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Искать
+            </button>
+        </div>
+    </form>
+
+    <!-- Список товаров -->
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for product in products %}
+        <div class="col">
+            <div class="card h-100">
+                {% if product.image %}
+                <img src="{{ url_for('static', filename='upload/' + product.image) }}"
+                     class="card-img-top product-image"
+                     alt="{{ product.name }}">
+                {% else %}
+                <div class="card-img-top no-image">Нет изображения</div>
+                {% endif %}
+
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text">{{ product.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h4 text-success">{{ product.price }} ₽</span>
+                        {% if product.amount_available and product.amount_available > 0 %}
+                            <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
+                        {% else %}
+                            <span class="badge bg-danger">Нет в наличии</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-primary w-100">В корзину</button>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                Товары не найдены. Попробуйте изменить условия поиска.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}
