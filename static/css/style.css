@@ -1,3 +1,24 @@
+/* Изображения для карточек товара */
+
+.product-image {
+    height: 200px;
+    object-fit: cover;
+    object-position: center;
+}
+
+.no-image {
+    height: 200px;
+    background: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+}
+
+
+
+/* Наведения на футер */
+
 .navbar-nav .nav-link {
     position: relative;
     transition: all 0.5s ease;

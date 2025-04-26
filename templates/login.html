@@ -22,6 +22,7 @@
                     {{ error }}
                 </p>
             {% endfor %}
+        <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
         </p>
         <p>{{form.submit(class='btn btn-primary w-50', type='submit')}}</p>
         {{message}}

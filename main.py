@@ -17,7 +17,7 @@ from form.product import ProductForm
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-app.config['UPLOAD_FOLDER'] = 'upload'
+app.config['UPLOAD_FOLDER'] = 'static/upload'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -41,12 +41,14 @@ def home():
     db_sess = db_session.create_session()
     # возьмём из аргументов в url параметр поиска, появится если пользователь что-то искал
     search = request.args.get('search', '')
+    # выбираем товары которые октрыты
+    query = db_sess.query(Product).filter(Product.open == True)
     if search:
         # если пользователь что-то ищёт, будем искать совпадение в названии товара
-        products = db_sess.query(Product).filter(Product.name.ilike(f'%{search}%')).all()
+        products = query.filter(Product.name.ilike(f'%{search}%')).all()
     else:
-        products = db_sess.query(Product).all()
-    return render_template('all_products.html',  products=products)
+        products = query.all()
+    return render_template('all_products.html', products=products)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -127,6 +129,8 @@ def add_product():
             description=form.description.data,
             image=filename,
             user_id=current_user.id,
+            open=form.open.data,
+            amount_available=form.amount_available.data
         )
 
         current_user.products.append(product)

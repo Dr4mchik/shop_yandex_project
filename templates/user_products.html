@@ -1,23 +1,43 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>Мои товары</h2>
-    <div class="row">
+ <div class="row row-cols-1 row-cols-md-3 g-4">
         {% for product in products %}
-        <div class="col-md-4 mb-4">
-            <div class="card">
+        <div class="col">
+            <div class="card h-100">
                 {% if product.image %}
-                <img src="{{ url_for('static', filename='upload/' + product.image) }}" class="card-img-top">
+                <img src="{{ url_for('static', filename='upload/' + product.image) }}"
+                     class="card-img-top product-image"
+                     alt="{{ product.name }}">
+                {% else %}
+                <div class="card-img-top no-image">Нет изображения</div>
                 {% endif %}
+
                 <div class="card-body">
                     <h5 class="card-title">{{ product.name }}</h5>
                     <p class="card-text">{{ product.description }}</p>
-                    <p class="text-success">{{ product.price }} ₽</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h4 text-success">{{ product.price }} ₽</span>
+                        {% if product.amount_available and product.amount_available > 0 %}
+                            <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
+                        {% else %}
+                            <span class="badge bg-danger">Нет в наличии</span>
+                        {% endif %}
+                    </div>
                 </div>
+
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-primary w-100">Изменить</button>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                Товары не найдены. Попробуйте изменить условия поиска.
             </div>
         </div>
         {% endfor %}
     </div>
-</div>
 {% endblock %}

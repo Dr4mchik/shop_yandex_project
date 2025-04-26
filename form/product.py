@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, FloatField, TextAreaField, SubmitField, BooleanField
+from wtforms import StringField, IntegerField, FloatField, TextAreaField, SubmitField, BooleanField
 from wtforms.validators import DataRequired
 
 
@@ -9,6 +9,6 @@ class ProductForm(FlaskForm):
     price = FloatField('Price', validators=[DataRequired()])
     description = TextAreaField('Description')
     image = FileField('Product image', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
-    amount_available = FileField('Amount available')
-    open = BooleanField('Open')
+    amount_available = IntegerField('Amount available')
+    open = BooleanField('Open product for all', default=False)
     submit = SubmitField('Submit')
