@@ -1,5 +1,6 @@
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request, abort
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user
+from sqlalchemy import and_
 from werkzeug.utils import secure_filename
 import datetime
 import os
@@ -139,7 +140,50 @@ def add_product():
 
         return redirect('/user/products')
 
-    return render_template('product.html', form=form)
+    return render_template('add_product.html', form=form)
+
+
+@app.route('/user/products/edit/<int:product_id>', methods=['GET', "POST"])
+@login_required
+def edit_product(product_id):
+    form = ProductForm()
+    db_sess = db_session.create_session()
+    product = db_sess.query(Product).filter(and_(Product.id == product_id, Product.user_id == current_user.id)).first()
+
+    if not product:
+        abort(404)
+
+    if request.method == 'GET':
+
+        form.name.data = product.name
+        form.price.data = product.price
+        form.description.data = product.description
+        form.amount_available.data = product.amount_available
+        form.open.data = product.open
+        form.submit.label.text = 'Изменить товар'
+
+        return render_template('add_product.html', form=form)
+
+    else:
+        if form.validate_on_submit():
+
+            image_file = form.image.data  # Получаем файл из формы
+            filename = product.filename.data
+
+            if image_file:  # Если файл был загружен
+                os.remove(filename)  # удаляем старый файл
+                filename = secure_filename(image_file.filename)  # Безопасное имя файла
+                upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
+                image_file.save(os.path.join(upload_folder, filename))  # Сохраняем файл
+
+            product.name = form.name.data
+            product.price = form.price.data
+            product.description = form.description.data
+            product.amount_available = form.amount_available.data
+            product.open = form.open.data
+
+            db_sess.commit()
+            return redirect('/user/products')
 
 
 if __name__ == '__main__':

@@ -5,35 +5,37 @@
         {% for product in products %}
         <div class="col">
             <div class="card h-100">
-                {% if product.image %}
-                <img src="{{ url_for('static', filename='upload/' + product.image) }}"
-                     class="card-img-top product-image"
-                     alt="{{ product.name }}">
-                {% else %}
-                <div class="card-img-top no-image">Нет изображения</div>
-                {% endif %}
+                <a href="/products/{{ product.id }}" class="text-decoration-none text-dark ">
+                    {% if product.image %}
+                    <img src="{{ url_for('static', filename='upload/' + product.image) }}"
+                         class="card-img-top product-image"
+                         alt="{{ product.name }}">
+                    {% else %}
+                    <div class="card-img-top no-image">Нет изображения</div>
+                    {% endif %}
 
-                <div class="card-body">
-                    <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text">{{ product.description }}</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                         <span class="h4 text-success">{{ product.price }} ₽</span>
-                        {% if product.open %}
-                            <span class="badge bg-success">Открытый</span>
-                        {% else %}
-                            <span class="badge bg-danger">Закрытый</span>
-                        {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">{{ product.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                             <span class="h4 text-success">{{ product.price }} ₽</span>
+                            {% if product.open %}
+                                <span class="badge bg-success">Открытый</span>
+                            {% else %}
+                                <span class="badge bg-danger">Закрытый</span>
+                            {% endif %}
 
-                        {% if product.amount_available and product.amount_available > 0 %}
-                            <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
-                        {% else %}
-                            <span class="badge bg-danger">Нет в наличии</span>
-                        {% endif %}
+                            {% if product.amount_available and product.amount_available > 0 %}
+                                <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">Нет в наличии</span>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
+                </a>
 
                 <div class="card-footer bg-transparent">
-                    <button class="btn btn-primary w-100">Изменить</button>
+                    <a href="/user/products/edit/{{product.id}}" class="btn btn-primary w-100">Редактировать</a>
                     <span></span>
                 </div>
             </div>

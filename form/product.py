@@ -11,4 +11,4 @@ class ProductForm(FlaskForm):
     image = FileField('Изображение продукта', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
     amount_available = IntegerField('Количество товара')
     open = BooleanField('Открытый товар для всех', default=False)
-    submit = SubmitField('Добавить')
+    submit = SubmitField('Добавить товар')
