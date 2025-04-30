@@ -338,7 +338,8 @@ def cart():
 def cart_update(product_id):
     db_sess = db_session.create_session()
     new_amount = request.form.get('amount', type=int)
-    print(new_amount)
+    if new_amount is None:
+        return redirect('/user/cart')
 
     order_item = db_sess.query(OrderItem).filter(OrderItem.product_id == product_id).first()
     if not order_item:
