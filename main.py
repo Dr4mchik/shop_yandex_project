@@ -10,7 +10,7 @@ from data import db_session
 # импортируем модели
 from data.user import User
 from data.product import Product
-from data.order import Order, OrderItem
+from data.order import OrderItem
 
 # импортируем формы
 from form.user_registration import RegistrationForm
@@ -257,7 +257,7 @@ def balance():
 def user_orders():
     db_sess = db_session.create_session()
     # Получаем все заказы пользователя, отсортированные по дате (новые сначала)
-    orders = db_sess.query(Order).filter(Order.user_id == current_user.id).order_by(Order.created_date.desc()).all()
+    orders = db_sess.query(OrderItem).filter(OrderItem.user_id == current_user.id).all()
     return render_template('orders.html', orders=orders, title='Мои заказы')
 
 
@@ -276,11 +276,6 @@ def test_create_order():
 
     if not product:
         flash('Нет доступных товаров для тестового заказа', 'warning')
-        return redirect('/')
-
-    # Проверяем, достаточно ли средств
-    if current_user.balance < product.price:
-        flash('Недостаточно средств для оформления заказа', 'danger')
         return redirect('/')
 
     # Создаем новый заказ
@@ -313,6 +308,62 @@ def test_create_order():
 
     flash('Тестовый заказ успешно создан!', 'success')
     return redirect('/user/orders')
+
+
+@app.route('/user/add_cart/<int:product_id>')
+@login_required
+def add_cart(product_id):
+    db_sess = db_session.create_session()
+    order_item = OrderItem()
+    order_item.user_id = current_user.id
+    order_item.product_id = product_id
+    db_sess.add(order_item)
+    db_sess.commit()
+    return redirect('/')
+
+
+@app.route('/user/cart')
+@login_required
+def cart():
+    db_sess = db_session.create_session()
+    order_item = db_sess.query(OrderItem).filter(current_user.id == OrderItem.user_id).all()
+    product_amount_sum = sum([i.amount for i in order_item])
+    product_price_sum = sum([i.amount * i.product.price for i in order_item])
+    return render_template('cart.html', products=order_item,
+                           product_amount_sum=product_amount_sum, product_price_sum=product_price_sum)
+
+
+@app.route('/user/cart/update/<int:product_id>', methods=['POST'])
+@login_required
+def cart_update(product_id):
+    db_sess = db_session.create_session()
+    new_amount = request.form.get('amount', type=int)
+    print(new_amount)
+
+    order_item = db_sess.query(OrderItem).filter(OrderItem.product_id == product_id).first()
+    if not order_item:
+        abort(404)
+
+    if new_amount < 0 or order_item.product.amount_available < new_amount:
+        abort(400)
+
+    order_item.amount = new_amount
+    db_sess.commit()
+
+    return redirect('/user/cart')
+
+
+@app.route('/user/cart/delete/<int:product_id>')
+@login_required
+def cart_delete(product_id):
+    db_sess = db_session.create_session()
+    order_item = db_sess.query(OrderItem).filter(OrderItem.id == product_id).first()
+    if not order_item:
+        abort(404)
+
+    db_sess.delete(order_item)
+    db_sess.commit()
+    return redirect('/user/cart')
 
 
 if __name__ == '__main__':

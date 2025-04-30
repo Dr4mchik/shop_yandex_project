@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Корзина покупок</h2>
+
+    {% if products %}
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            {% for item in products %}
+            <div class="card mb-3">
+                <div class="row g-0">
+                    <!-- Изображение товара -->
+                    <div class="col-md-3">
+                        {% if item.image %}
+                        <img src="{{ url_for('static', filename='upload/' + item.product.image) }}"
+                             class="card-img-top product-image"
+                             alt="{{ item.product.name }}">
+                        {% else %}
+                        <div class="card-img-top no-image">Нет изображения</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Информация о товаре -->
+                    <div class="col-md-6">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.product.name }}</h5>
+                            <p class="card-text text-muted small">{{ item.product.description|truncate(100) }}</p>
+                            <div class="d-flex align-items-center">
+                                <form method="POST" action="/user/cart/update/{{ item.product.id }}"
+                                      class="me-3">
+                                    <div class="input-group input-group-sm" style="width: 120px;">
+                                        <input type="number"
+                                               name="amount"
+                                               class="form-control"
+                                               value="{{ item.product.amount }}"
+                                               min="1"
+                                               max="{{ item.product.amount_available }}">
+                                        <button type="submit" class="btn btn-outline-primary">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                                <form method="POST"
+                                      action="">
+                                    <a href="/user/cart/delete/{{item.id}}" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Цена и сумма -->
+                    <div class="col-md-3">
+                        <div class="card-body text-end">
+                            <p class="card-text h5">{{ item.product.price }} ₽</p>
+                            <p class="text-muted small">{{item.amount}} ед.</p>
+                            <p class="text-muted small">Сумма: {{ item.product.price * item.amount}} ₽</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Итоговая панель -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Детали заказа</h5>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Товаров:</span>
+                        <span>{{ product_amount_sum }} шт.</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Общая сумма:</span>
+                        <span class="h5">{{ product_price_sum }}₽</span>
+                    </div>
+                    <a href="" class="btn btn-success w-100 py-2">
+                        <i class="bi bi-bag-check me-2"></i>Оформить заказ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <h4 class="text-muted mb-4">Ваша корзина пуста</h4>
+        <a href="" class="btn btn-primary">
+            <i class="bi bi-arrow-left me-2"></i>Вернуться к покупкам
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

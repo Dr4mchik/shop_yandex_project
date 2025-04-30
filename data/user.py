@@ -20,8 +20,6 @@ class User(SqlAlchemyBase, UserMixin):
 
     # Связь с продуктами (уже была в исходном коде)
     products = relationship("Product", back_populates="user")
-    # Связь с заказами
-    orders = relationship("Order", back_populates="user")
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
