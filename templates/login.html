@@ -1,31 +1,70 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="col-md-6 mx-auto mt-5 shadow-lg p-3 mb-5 bg-body rounded">
-    <h1 class="mb-4">Авторизация</h1>
-    <form action="" method="post">
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-            {{form.email.label}}<br>
-            {{form.email(class='form-control', type='email')}}<br>
-            {% for error in form.email.errors %}
-                <p class="alert alert-danger">
-                    {{ error }}
-                </p>
-            {% endfor %}
+<div class="auth-form-container">
+    <div class="auth-card shadow-lg">
+        <div class="auth-header">
+            <h1><i class="fas fa-sign-in-alt me-2"></i> Авторизация</h1>
         </div>
-        <p>
-            {{form.password.label}}<br>
-            {{form.password(class='form-control', type='password')}}<br>
-            {% for error in form.password.errors %}
-                <p class="alert alert-danger">
-                    {{ error }}
-                </p>
-            {% endfor %}
-        <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
-        </p>
-        <p>{{form.submit(class='btn btn-primary w-50', type='submit')}}</p>
-        {{message}}
-    </form>
+        <div class="auth-body">
+            <form action="" method="post">
+                {{ form.hidden_tag() }}
+
+                <div class="form-floating input-icon">
+                    {{ form.email(class='form-control', placeholder='Email', id='email') }}
+                    {{ form.email.label }}
+                    <i class="fas fa-envelope"></i>
+                    {% for error in form.email.errors %}
+                        <div class="alert alert-danger mt-2">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="form-floating input-icon">
+                    {{ form.password(class='form-control', placeholder='Password', id='password') }}
+                    {{ form.password.label }}
+                    <i class="fas fa-eye toggle-password"></i>
+                    {% for error in form.password.errors %}
+                        <div class="alert alert-danger mt-2">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="form-check">
+                    {{ form.remember_me(class='form-check-input', id='remember_me') }}
+                    {{ form.remember_me.label(class='form-check-label') }}
+                </div>
+
+                {{ form.submit(class='btn btn-auth', value='Войти') }}
+
+                {% if message %}
+                    <div class="alert alert-danger mt-3">{{ message }}</div>
+                {% endif %}
+            </form>
+        </div>
+        <div class="auth-footer">
+            <p>Еще нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрироваться</a></p>
+        </div>
+    </div>
 </div>
+
+<script>
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-password').forEach(function(element) {
+        element.addEventListener('click', function() {
+            const passwordInput = this.previousElementSibling.previousElementSibling;
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                this.classList.remove('fa-eye');
+                this.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                this.classList.remove('fa-eye-slash');
+                this.classList.add('fa-eye');
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -12,7 +12,7 @@ class Order(SqlAlchemyBase):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     created_date = Column(DateTime, default=datetime.datetime.now)
     total_price = Column(Float, nullable=False)
-    status = Column(String, default='new')  # new, processing, shipped, delivered, canceled
+    status = Column(String, default='new')
 
     # Связь с пользователем
     user = relationship('User', back_populates='orders')
