@@ -1,26 +1,27 @@
-import datetime
-from .db_session import SqlAlchemyBase
-import sqlalchemy
-from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
+from sqlalchemy import Column, Integer, String, DateTime, Float
+from sqlalchemy.orm import relationship
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from .db_session import SqlAlchemyBase
 
 
 class User(SqlAlchemyBase, UserMixin):
-    """Модель пользователя"""
     __tablename__ = 'users'
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    surname = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    email = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    hashed_password = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    modified_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
-    role = sqlalchemy.Column(sqlalchemy.Integer)
-    # роль для управлений правами пользователя
-    # для привязки к магазину, например владелец магазина, продавец
-    products = sqlalchemy.orm.relationship("Product", back_populates="user")
 
-    def __repr__(self):
-        return f'<User> -- {self.id} | {self.surname} | {self.name} | {self.email}'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, unique=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    surname = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    modified_date = Column(DateTime)
+    # Добавляем поле баланса пользователя с дефолтным значением 0
+    balance = Column(Float, default=0.0, nullable=False)
+
+    # Связь с продуктами (уже была в исходном коде)
+    products = relationship("Product", back_populates="user")
+    # Связь с заказами
+    orders = relationship("Order", back_populates="user")
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

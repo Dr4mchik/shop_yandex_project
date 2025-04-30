@@ -10,6 +10,7 @@ class Product(SqlAlchemyBase):
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     price = sqlalchemy.Column(sqlalchemy.Float, nullable=False)
     description = sqlalchemy.Column(sqlalchemy.Text)
+    created_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
 
     open = sqlalchemy.Column(sqlalchemy.Boolean)  # открыт ли продукт для общего доступа
     amount_available = sqlalchemy.Column(sqlalchemy.Integer)  # сколько есть продукта для продажи
@@ -18,4 +19,4 @@ class Product(SqlAlchemyBase):
     image = sqlalchemy.Column(sqlalchemy.String)
 
     user_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('users.id'))
-    user = sqlalchemy.orm.relationship("User")
+    user = sqlalchemy.orm.relationship('User', back_populates='products')
