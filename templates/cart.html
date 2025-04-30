@@ -12,7 +12,7 @@
                 <div class="row g-0">
                     <!-- Изображение товара -->
                     <div class="col-md-3">
-                        {% if item.image %}
+                        {% if item.product.image %}
                         <img src="{{ url_for('static', filename='upload/' + item.product.image) }}"
                              class="card-img-top product-image"
                              alt="{{ item.product.name }}">
