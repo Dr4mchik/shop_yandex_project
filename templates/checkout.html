@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Оформление заказа</h2>
+
+    <div class="row">
+        <!-- Левая колонка: Форма заказа -->
+        <div class="col-lg-8">
+            <form method="POST" action="/user/checkout">
+                {{ form.hidden_tag() }}
+
+                <!-- Контактная информация -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Контактная информация</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">Имя *</label>
+                                {{ form.name(class="form-control", value=current_user.name) }}
+                                {% if form.name.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.name.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="surname" class="form-label">Фамилия *</label>
+                                {{ form.surname(class="form-control", value=current_user.surname) }}
+                                {% if form.surname.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.surname.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email *</label>
+                                {{ form.email(class="form-control", value=current_user.email) }}
+                                {% if form.email.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.email.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Телефон *</label>
+                                {{ form.phone(class="form-control", placeholder="+7XXXXXXXXXX") }}
+                                {% if form.phone.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.phone.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Способ доставки -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Способ доставки</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.delivery_type(class="form-select") }}
+                            {% if form.delivery_type.errors %}
+                            <div class="text-danger">
+                                {% for error in form.delivery_type.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Блок самовывоза (показывается/скрывается через JS) -->
+                        <div id="selfPickup" class="delivery-option mb-3" style="display:none;">
+                            <div class="alert alert-info">
+                                <p><i class="bi bi-info-circle"></i> Вы можете забрать ваш заказ по адресу:</p>
+                                <p><strong>Россошь, ул. Примерная, д. 123</strong></p>
+                                <p>Часы работы: Пн-Пт с 10:00 до 20:00, Сб-Вс с 11:00 до 18:00</p>
+                            </div>
+                        </div>
+
+                        <!-- Блок ПВЗ (показывается/скрывается через JS) -->
+                        <div id="pickupPoint" class="delivery-option mb-3" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label">Выберите службу доставки:</label>
+                                {{ form.delivery_service(class="form-select mb-3") }}
+                                {% if form.delivery_service.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.delivery_service.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Адрес для поиска пунктов выдачи:</label>
+                                <div class="input-group">
+                                    {{ form.address(class="form-control", placeholder="Введите адрес") }}
+                                    <button type="button" id="searchPvzBtn" class="btn btn-outline-primary">
+                                        <i class="bi bi-search"></i> Найти
+                                    </button>
+                                </div>
+                                {% if form.address.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.address.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Карта для отображения ПВЗ -->
+                            <div id="map" style="width: 100%; height: 400px;" class="mb-3"></div>
+
+                            <!-- Скрытое поле для хранения выбранного ПВЗ -->
+                            {{ form.selected_pvz }}
+
+                            <!-- Блок выбранного ПВЗ -->
+                            <div id="selectedPvzInfo" class="alert alert-success mt-3" style="display:none;">
+                                <p><strong>Выбранный пункт выдачи:</strong></p>
+                                <p id="pvzAddress"></p>
+                                <p id="pvzWorkHours"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Способ оплаты -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Способ оплаты</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.payment_method(class="form-select") }}
+                            {% if form.payment_method.errors %}
+                            <div class="text-danger">
+                                {% for error in form.payment_method.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                                                <!-- Блок оплаты с баланса -->
+                        <div id="balancePayment" class="payment-option" style="display:none;">
+                            <div class="alert alert-info">
+                                <p>Ваш текущий баланс: <strong>{{ current_user.balance }}₽</strong></p>
+                                {% if current_user.balance < order_total %}
+                                <p class="text-danger">Недостаточно средств. <a href="/user/balance">Пополнить баланс</a></p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Блок оплаты картой -->
+                        <div id="cardPayment" class="payment-option" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label">Номер карты:</label>
+                                {{ form.card_number(class="form-control", placeholder="XXXX XXXX XXXX XXXX") }}
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">Срок действия:</label>
+                                    {{ form.card_expiry(class="form-control", placeholder="MM/YY") }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">CVV:</label>
+                                    {{ form.card_cvv(class="form-control", placeholder="XXX") }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Комментарий к заказу -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Комментарий к заказу</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form.comment(class="form-control", rows=3, placeholder="Дополнительная информация по
+                        заказу...") }}
+                    </div>
+                </div>
+
+                <!-- Кнопка оформления заказа -->
+                <div class="d-grid gap-2">
+                    <button type="submit" id="orderSubmitBtn" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle"></i> Оформить заказ
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Правая колонка: Сводка заказа -->
+        <div class="col-lg-4">
+            <!-- Сводка заказа -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Ваш заказ</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Товары ({{ product_amount_sum }} шт.)</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for item in products %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <span>{{ item.product.name|truncate(20) }}</span>
+                                    <small class="text-muted d-block">{{ item.amount }} шт. × {{ item.product.price
+                                        }}₽</small>
+                                </div>
+                                <span>{{ item.product.price * item.amount }}₽</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Товары:</span>
+                            <span>{{ product_price_sum }}₽</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Доставка:</span>
+                            <span id="deliveryCost">0₽</span>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="h5">Итого:</span>
+                        <span class="h5" id="totalCost">{{ product_price_sum }}₽</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://api-maps.yandex.ru/2.1/?apikey=ваш_API_ключ&lang=ru_RU"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Показывать/скрывать блоки в зависимости от выбранного способа доставки
+        const deliverySelect = document.getElementById('delivery_type');
+        const selfPickupBlock = document.getElementById('selfPickup');
+        const pickupPointBlock = document.getElementById('pickupPoint');
+        
+        deliverySelect.addEventListener('change', function() {
+            // Скрываем все блоки
+            selfPickupBlock.style.display = 'none';
+            pickupPointBlock.style.display = 'none';
+            
+            // Показываем нужный блок
+            if (this.value === 'self_pickup') {
+                selfPickupBlock.style.display = 'block';
+                updateDeliveryCost(0);
+            } else if (this.value === 'pickup_point') {
+                pickupPointBlock.style.display = 'block';
+                updateDeliveryCost(150); // Примерная стоимость доставки в ПВЗ
+            }
+        });
+
+                // Проверка баланса при оплате с баланса
+        const paymentSelect = document.getElementById('payment_method');
+        const balanceAmount = {{ current_user.balance }};
+        const orderTotal = {{ product_price_sum }};
+        const orderSubmitBtn = document.getElementById('orderSubmitBtn');
+
+        // Функция проверки баланса при изменении способа оплаты
+        function checkBalancePayment() {
+            // Если выбрана оплата с баланса и баланса недостаточно
+            if (paymentSelect.value === 'balance' && balanceAmount < orderTotal) {
+                orderSubmitBtn.disabled = true;
+                orderSubmitBtn.title = 'Недостаточно средств на балансе';
+            } else {
+                orderSubmitBtn.disabled = false;
+                orderSubmitBtn.title = '';
+            }
+        }
+
+        // Проверяем при загрузке страницы
+        checkBalancePayment();
+
+        // Проверяем при изменении способа оплаты
+        paymentSelect.addEventListener('change', checkBalancePayment);
+
+        // Показывать/скрывать блоки в зависимости от выбранного способа оплаты
+        const paymentSelect = document.getElementById('payment_method');
+        const balancePaymentBlock = document.getElementById('balancePayment');
+        const cardPaymentBlock = document.getElementById('cardPayment');
+        
+        paymentSelect.addEventListener('change', function() {
+            // Скрываем все блоки
+            balancePaymentBlock.style.display = 'none';
+            cardPaymentBlock.style.display = 'none';
+            
+            // Показываем нужный блок
+            if (this.value === 'balance') {
+                balancePaymentBlock.style.display = 'block';
+            } else if (this.value === 'card') {
+                cardPaymentBlock.style.display = 'block';
+            }
+        });
+        
+        // Инициализируем карту при загрузке страницы
+        let myMap;
+        let deliveryMarkers = [];
+        
+        // Инициализация Яндекс.Карты
+        ymaps.ready(init);
+        
+        function init() {
+            myMap = new ymaps.Map('map', {
+                center: [55.76, 37.64], // Москва по умолчанию
+                zoom: 10,
+                controls: ['zoomControl', 'searchControl', 'geolocationControl']
+            });
+            
+            // Запрашиваем местоположение пользователя
+            ymaps.geolocation.get({
+                provider: 'browser',
+                mapStateAutoApply: true
+            }).then(function (result) {
+                // Успешное определение местоположения
+                const userLocation = result.geoObjects.get(0).geometry.getCoordinates();
+                addUserMarker(userLocation);
+            }).catch(function (err) {
+                console.log('Не удалось определить местоположение');
+            });
+            
+            // Поиск ПВЗ при нажатии на кнопку
+            document.getElementById('searchPvzBtn').addEventListener('click', function() {
+                const address = document.getElementById('address').value;
+                if (address) {
+                    searchPvzByAddress(address);
+                }
+            });
+
+            // Поиск при нажатии Enter в поле адреса
+            document.getElementById('address').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('searchPvzBtn').click();
+                }
+            });
+            
+            // Обработка выбора службы доставки
+            document.getElementById('delivery_service').addEventListener('change', function() {
+                const address = document.getElementById('address').value;
+                if (address) {
+                    searchPvzByAddress(address);
+                }
+            });
+        }
+        
+        // Функция для добавления метки пользователя
+        function addUserMarker(coords) {
+            myMap.geoObjects.add(new ymaps.Placemark(coords, {
+                balloonContent: 'Вы здесь'
+            }, {
+                preset: 'islands#blueCircleDotIcon'
+            }));
+        }
+        
+        // Функция для поиска ПВЗ по адресу
+        function searchPvzByAddress(address) {
+            // Очищаем предыдущие метки ПВЗ
+            clearDeliveryMarkers();
+            
+            // Геокодируем адрес
+            ymaps.geocode(address).then(function(res) {
+                const coords = res.geoObjects.get(0).geometry.getCoordinates();
+                myMap.setCenter(coords, 12);
+                
+                // Добавляем метку по адресу
+                myMap.geoObjects.add(new ymaps.Placemark(coords, {
+                    balloonContent: 'Вы искали: ' + address
+                }, {
+                    preset: 'islands#greenDotIcon'
+                }));
+                
+                // Загружаем ПВЗ выбранной службы доставки
+                const deliveryService = document.getElementById('delivery_service').value;
+                loadPvzPoints(coords, deliveryService);
+            }).catch(function(error) {
+                console.error('Ошибка геокодирования:', error);
+                alert('Не удалось найти указанный адрес');
+            });
+        }
+        
+        // Функция для загрузки точек ПВЗ
+        function loadPvzPoints(coords, deliveryService) {
+            // В реальном приложении здесь был бы AJAX-запрос к API службы доставки
+            // Мы используем фиктивные данные для демонстрации
+            
+            const pvzData = {
+                'yandex': [
+                    {id: 'y1', name: 'Яндекс.Маркет ПВЗ №1', address: 'ул. Тверская, 15', hours: 'Пн-Вс 10:00-22:00', coords: [coords[0] + 0.01, coords[1] + 0.01]},
+                    {id: 'y2', name: 'Яндекс.Маркет ПВЗ №2', address: 'Ленинский пр-т, 20', hours: 'Пн-Пт 9:00-21:00, Сб-Вс 10:00-20:00', coords: [coords[0] - 0.01, coords[1] - 0.012]},
+                    {id: 'y3', name: 'Яндекс.Маркет ПВЗ №3', address: 'ул. Арбат, 10', hours: 'Пн-Вс 9:00-21:00', coords: [coords[0] + 0.015, coords[1] - 0.008]}
+                ],
+                'wildberries': [
+                    {id: 'w1', name: 'Wildberries ПВЗ №1', address: 'ул. Новый Арбат, 12', hours: 'Пн-Вс 10:00-22:00', coords: [coords[0] + 0.008, coords[1] + 0.013]},
+                    {id: 'w2', name: 'Wildberries ПВЗ №2', address: 'Кутузовский пр-т, 30', hours: 'Пн-Пт 8:00-22:00, Сб-Вс 9:00-21:00', coords: [coords[0] - 0.012, coords[1] + 0.01]},
+                    {id: 'w3', name: 'Wildberries ПВЗ №3', address: 'ул. Пятницкая, 25', hours: 'Пн-Вс 8:00-23:00', coords: [coords[0] - 0.008, coords[1] - 0.015]}
+                ],
+                'ozon': [
+                    {id: 'o1', name: 'Ozon ПВЗ №1', address: 'Садовое кольцо, 5', hours: 'Пн-Вс 9:00-21:00', coords: [coords[0] + 0.012, coords[1] - 0.01]},
+                    {id: 'o2', name: 'Ozon ПВЗ №2', address: 'Проспект Мира, 40', hours: 'Пн-Вс 10:00-22:00', coords: [coords[0] - 0.015, coords[1] + 0.008]},
+                    {id: 'o3', name: 'Ozon ПВЗ №3', address: 'ул. Тверская, 18', hours: 'Пн-Пт 8:00-22:00, Сб-Вс 9:00-21:00', coords: [coords[0] + 0.005, coords[1] - 0.016]}
+                ],
+                'pochta': [
+                    {id: 'p1', name: 'Почта России №1', address: 'ул. Мясницкая, 26', hours: 'Пн-Пт 8:00-20:00, Сб 9:00-18:00, Вс выходной', coords: [coords[0] - 0.013, coords[1] - 0.009]},
+                    {id: 'p2', name: 'Почта России №2', address: 'Ленинградский пр-т, 15', hours: 'Пн-Пт 9:00-19:00, Сб 9:00-16:00, Вс выходной', coords: [coords[0] + 0.014, coords[1] + 0.015]},
+                    {id: 'p3', name: 'Почта России №3', address: 'ул. Никольская, 10', hours: 'Пн-Пт 8:00-20:00, Сб-Вс 9:00-18:00', coords: [coords[0] - 0.01, coords[1] + 0.014]}
+                ],
+                'cdek': [
+                    {id: 'c1', name: 'СДЭК ПВЗ №1', address: 'Кутузовский пр-т, 12', hours: 'Пн-Вс 9:00-21:00', coords: [coords[0] + 0.011, coords[1] - 0.014]},
+                    {id: 'c2', name: 'СДЭК ПВЗ №2', address: 'ул. Маросейка, 7', hours: 'Пн-Пт 9:00-20:00, Сб-Вс 10:00-18:00', coords: [coords[0] - 0.016, coords[1] - 0.008]},
+                    {id: 'c3', name: 'СДЭК ПВЗ №3', address: 'Ленинский пр-т, 60', hours: 'Пн-Вс 8:00-22:00', coords: [coords[0] + 0.009, coords[1] + 0.012]}
+                ]
+            };
+            
+            // Получаем ПВЗ выбранной службы
+            const pvzPoints = pvzData[deliveryService] || [];
+            
+            // Добавляем метки ПВЗ на карту
+            pvzPoints.forEach(function(pvz) {
+                const marker = new ymaps.Placemark(pvz.coords, {
+                    balloonContent: `
+                        <strong>${pvz.name}</strong><br>
+                        Адрес: ${pvz.address}<br>
+                        Часы работы: ${pvz.hours}<br>
+                        <button id="select-pvz-${pvz.id}" class="btn btn-sm btn-primary mt-2">Выбрать</button>
+                    `
+                }, {
+                    preset: 'islands#redDotIcon'
+                });
+                
+                marker.events.add('balloonopen', function() {
+                    // Добавляем обработчик после открытия балуна
+                    setTimeout(() => {
+                        const selectBtn = document.getElementById(`select-pvz-${pvz.id}`);
+                        if (selectBtn) {
+                            selectBtn.addEventListener('click', function() {
+                                selectPvz(pvz);
+                                marker.balloon.close();
+                            });
+                        }
+                    }, 100);
+                });
+                
+                myMap.geoObjects.add(marker);
+                deliveryMarkers.push(marker);
+            });
+        }
+        
+        // Очистка меток ПВЗ
+        function clearDeliveryMarkers() {
+            deliveryMarkers.forEach(function(marker) {
+                myMap.geoObjects.remove(marker);
+            });
+            deliveryMarkers = [];
+        }
+        
+        // Выбор ПВЗ
+        function selectPvz(pvz) {
+            // Заполняем информацию о выбранном ПВЗ
+            document.getElementById('pvzAddress').textContent = `Адрес: ${pvz.address}`;
+            document.getElementById('pvzWorkHours').textContent = `Часы работы: ${pvz.hours}`;
+            document.getElementById('selectedPvzInfo').style.display = 'block';
+            
+            // Заполняем скрытое поле с данными о выбранном ПВЗ
+            document.getElementById('selected_pvz').value = JSON.stringify({
+                id: pvz.id,
+                name: pvz.name,
+                address: pvz.address,
+                hours: pvz.hours
+            });
+        }
+        
+        // Обновление стоимости доставки и итоговой суммы
+        function updateDeliveryCost(cost) {
+            document.getElementById('deliveryCost').textContent = cost + '₽';
+            
+            const productTotal = {{ product_price_sum }};
+            const totalCost = productTotal + cost;
+            document.getElementById('totalCost').textContent = totalCost + '₽';
+        }
+        
+        // Инициализация при загрузке страницы
+        // Эмулируем выбор первого элемента в селектах
+        if (deliverySelect.value) {
+            const event = new Event('change');
+            deliverySelect.dispatchEvent(event);
+        }
+        
+        if (paymentSelect.value) {
+            const event = new Event('change');
+            paymentSelect.dispatchEvent(event);
+        }
+    });
+</script>
+{% endblock %}

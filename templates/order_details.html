@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Заказ №{{ order.id }}</h2>
+        <a href="/user/orders" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> К списку заказов
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Статус заказа -->
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Статус заказа</h5>
+                    {% if order.status == 'new' %}
+                    <span class="badge bg-info">Новый</span>
+                    {% elif order.status == 'paid' %}
+                    <span class="badge bg-success">Оплачен</span>
+                    {% elif order.status == 'delivered' %}
+                    <span class="badge bg-primary">Доставлен</span>
+                    {% elif order.status == 'completed' %}
+                    <span class="badge bg-success">Завершен</span>
+                    {% elif order.status == 'cancelled' %}
+                    <span class="badge bg-danger">Отменен</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="mb-1"><strong>Дата создания:</strong></p>
+                            <p>{{ order.created_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                        </div>
+                        {% if order.payment_date %}
+                        <div>
+                            <p class="mb-1"><strong>Дата оплаты:</strong></p>
+                            <p>{{ order.payment_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <p class="mb-1"><strong>Способ оплаты:</strong></p>
+                            <p>
+                                {% if order.payment_method == 'balance' %}
+                                Оплата с баланса
+                                {% elif order.payment_method == 'card' %}
+                                Банковская карта
+                                {% elif order.payment_method == 'cod' %}
+                                Наложенный платеж
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="mb-1"><strong>Статус оплаты:</strong></p>
+                            <p>{% if order.is_paid %}<span class="text-success">Оплачено</span>{% else %}<span class="text-danger">Не оплачено</span>{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Информация о доставке -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Информация о доставке</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Способ доставки:</strong>
+                        {% if order.delivery_type == 'self_pickup' %}
+                        Самовывоз
+                        {% elif order.delivery_type == 'pickup_point' %}
+                        Пункт выдачи заказов
+                        {% endif %}
+                    </p>
+
+                    {% if order.delivery_type == 'pickup_point' and order.pvz_info %}
+                    {% set pvz = order.pvz_info|tojson|fromjson %}
+                    <p><strong>Служба доставки:</strong>
+                        {% if order.delivery_service == 'yandex' %}
+                        Яндекс.Маркет
+                        {% elif order.delivery_service == 'wildberries' %}
+                        Wildberries
+                        {% elif order.delivery_service == 'ozon' %}
+                        Ozon
+                        {% elif order.delivery_service == 'pochta' %}
+                        Почта России
+                        {% elif order.delivery_service == 'cdek' %}
+                        СДЭК
+                        {% endif %}
+                    </p>
+                    <p><strong>Пункт выдачи:</strong> {{ pvz.name }}</p>
+                    <p><strong>Адрес:</strong> {{ pvz.address }}</p>
+                    <p><strong>Часы работы:</strong> {{ pvz.hours }}</p>
+                    {% elif order.delivery_type == 'self_pickup' %}
+                    <p><strong>Адрес самовывоза:</strong> Москва, ул. Примерная, д. 123</p>
+                    <p><strong>Часы работы:</strong> Пн-Пт с 10:00 до 20:00, Сб-Вс с 11:00 до 18:00</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Товары в заказе -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Товары в заказе</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover m-0">
+                            <thead>
+                                <tr>
+                                    <th>Товар</th>
+                                    <th>Цена</th>
+                                    <th>Количество</th>
+                                    <th class="text-end">Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if item.product.image %}
+                                            <img src="{{ url_for('static', filename='upload/' + item.product.image) }}"
+                                                 class="img-thumbnail me-3" alt="{{ item.product.name }}"
+                                                 style="width: 50px; height: 50px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light text-center me-3" style="width: 50px; height: 50px; line-height: 50px;">
+                                                <i class="bi bi-image text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <p class="mb-0">{{ item.product.name }}</p>
+                                                <small class="text-muted">{{ item.product.description|truncate(50) }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ item.product.price }}₽</td>
+                                    <td>{{ item.amount }}</td>
+                                    <td class="text-end">{{ item.product.price * item.amount }}₽</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Комментарий к заказу -->
+            {% if order.comment %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Комментарий к заказу</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ order.comment }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Контактная информация -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Контактная информация</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Имя:</strong> {{ order.name }} {{ order.surname }}</p>
+                    <p><strong>Email:</strong> {{ order.email }}</p>
+                    <p><strong>Телефон:</strong> {{ order.phone }}</p>
+                </div>
+            </div>
+
+            <!-- Сумма заказа -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Сумма заказа</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Товары:</span>
+                        <span>{{ order.total_price - order.delivery_cost }}₽</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Доставка:</span>
+                        <span>{{ order.delivery_cost }}₽</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="h5">Итого:</span>
+                        <span class="h5">{{ order.total_price }}₽</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Действия с заказом -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Действия</h5>
+                </div>
+                <div class="card-body">
+                    {% if not order.is_paid and order.status != 'cancelled' %}
+                    <a href="#" class="btn btn-success w-100 mb-2">
+                        <i class="bi bi-credit-card"></i> Оплатить заказ
+                    </a>
+                    {% endif %}
+
+                    {% if order.status == 'new' or order.status == 'paid' %}
+                    <a href="#" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-x-circle"></i> Отменить заказ
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
