@@ -90,6 +90,8 @@ def register():
         db_sess.commit()
 
         # перенаправляем пользователя на главную страницу
+        flash('Пользователь успешно создан! Можете авторизоваться.')
+
         return redirect('/')
     return render_template('register.html', title='Регистрация', form=form)
 
@@ -144,6 +146,8 @@ def add_product():
         db_sess.merge(current_user)
         db_sess.commit()
 
+        flash('Товар успешно добавлен!', 'success')
+
         return redirect('/user/products')
 
     return render_template('add_product.html', form=form)
@@ -189,6 +193,7 @@ def edit_product(product_id):
             product.open = form.open.data
 
             db_sess.commit()
+            flash('Товар успешно изменен!', 'success')
             return redirect('/user/products')
 
 
@@ -254,16 +259,30 @@ def balance():
     return render_template('balance.html', form=form, title='Пополнение баланса')
 
 
-
 @app.route('/user/add_cart/<int:product_id>')
 @login_required
 def add_cart(product_id):
+    """Функция добавление товара в корзину товаров"""
     db_sess = db_session.create_session()
-    order_item = OrderItem()
-    order_item.user_id = current_user.id
-    order_item.product_id = product_id
-    db_sess.add(order_item)
+    # проверим на наличие такого же товара в корзине
+    # проверяем совпадение по пользователю (его корзина) и по продукту
+    order_item = db_sess.query(OrderItem).filter(
+        and_(OrderItem.product_id == product_id, OrderItem.user_id == current_user.id)).first()
+    if order_item:
+        # если такой товар есть в корзине
+        if order_item.product.amount_available >= order_item.amount + 1:
+            order_item.amount += 1
+        else:
+            flash('Нету такого кол-во товара!', 'warning')
+            return redirect('/')
+    else:
+        # если такого товара нет в корзине
+        order_item = OrderItem()
+        order_item.user_id = current_user.id
+        order_item.product_id = product_id
+        db_sess.add(order_item)
     db_sess.commit()
+    flash('Товар добавлен в корзину!', 'info')
     return redirect('/')
 
 

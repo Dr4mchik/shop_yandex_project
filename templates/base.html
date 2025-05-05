@@ -73,8 +73,14 @@
       </nav>
 </header>
 <div class="container mt-4">
+    <!-- Вывод сообщения пользователю -->
+    {% for category, flash_message in get_flashed_messages(True) %}
+    <div class="alert alert-{{category}}">{{flash_message}}</div>
+    {% endfor %}
+    <!-- основной блок -->
     {% block content %}{% endblock %}
 </div>
+
 <script>
     // Активация всплывающих подсказок Bootstrap (если используете)
     document.addEventListener('DOMContentLoaded', function() {
