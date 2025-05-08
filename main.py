@@ -338,6 +338,7 @@ def add_cart(product_id):
         if order_item.product.amount_available >= order_item.amount + 1:
             order_item.amount += 1
         else:
+            db_sess.close()
             flash('Нету такого кол-во товара!', 'warning')
             return redirect('/')
     else:
