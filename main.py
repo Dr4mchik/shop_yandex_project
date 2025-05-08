@@ -42,6 +42,11 @@ def logout():
     return redirect("/")
 
 
+@app.errorhandler(404)
+def error404(error):
+    return render_template('page404.html', title='Страница не найдена'), 404
+
+
 @app.route('/')
 def home():
     db_sess = db_session.create_session()
