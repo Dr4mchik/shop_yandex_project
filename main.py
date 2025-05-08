@@ -4,8 +4,7 @@ from sqlalchemy import and_
 from werkzeug.utils import secure_filename
 import datetime
 import os
-from form.checkout_form import CheckoutForm
-from data.order import Order
+from PIL import Image
 
 from data import db_session
 
@@ -13,6 +12,7 @@ from data import db_session
 from data.user import User
 from data.product import Product
 from data.order import OrderItem
+from data.order import Order
 
 # импортируем формы
 from form.user_registration import RegistrationForm
@@ -20,6 +20,7 @@ from form.user_login import LoginForm
 from form.product import ProductForm
 from form.profileform import ProfileForm
 from form.balanceform import BalanceForm
+from form.checkout_form import CheckoutForm
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -27,6 +28,20 @@ app.config['UPLOAD_FOLDER'] = 'static/upload'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+
+def set_filename_image(image_file):
+    filename = secure_filename(image_file.filename)  # Безопасное имя файла
+
+    if filename in os.listdir('static/upload'):  # проверяем уникальность названия файла
+        # если название файла не уникальное, нумеруем его
+        name, ext = os.path.splitext(filename)
+        number_to_add_filename = 0
+        while name + f'({number_to_add_filename}){ext}' in os.listdir():
+            number_to_add_filename += 1
+        filename = name + f'({number_to_add_filename})' + ext
+
+    return filename
 
 
 @login_manager.user_loader
@@ -127,35 +142,50 @@ def user_products():
 @login_required
 def add_product():
     form = ProductForm()
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        image_file = form.image.data  # Получаем файл из формы
-        filename = None
 
-        if image_file:  # Если файл был загружен
-            filename = secure_filename(image_file.filename)  # Безопасное имя файла
-            upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
-            image_file.save(os.path.join(upload_folder, filename))  # Сохраняем файл
+    if request.method == 'POST':
 
-        product = Product(
-            name=form.name.data,
-            price=form.price.data,
-            description=form.description.data,
-            image=filename,
-            user_id=current_user.id,
-            open=form.open.data,
-            amount_available=form.amount_available.data
-        )
+        if form.validate_on_submit():
 
-        current_user.products.append(product)
-        db_sess.merge(current_user)
-        db_sess.commit()
+            db_sess = db_session.create_session()
+            user = db_sess.query(User).filter(User.id == current_user.id).first()
+            image_file = form.image.data  # Получаем файл из формы
+            filename = None
 
-        flash('Товар успешно добавлен!', 'success')
+            if image_file:  # Если файл был загружен
 
-        return redirect('/user/products')
+                image = Image.open(image_file)
+                image = image.resize((520, 520))
 
-    return render_template('add_product.html', form=form)
+                filename = set_filename_image(image_file)  # Безопасное имя файла
+
+                upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
+                image.save(os.path.join(upload_folder, filename))  # Сохраняем файл
+
+            # создаём объект продукта
+            product = Product(
+                name=form.name.data,
+                price=form.price.data,
+                description=form.description.data,
+                image=filename,
+                user_id=current_user.id,
+                open=form.open.data,
+                amount_available=form.amount_available.data
+            )
+
+            # сохраняем его пользователю, который авторизован
+            user.products.append(product)
+            db_sess.merge(user)
+            db_sess.commit()
+
+            flash('Товар успешно добавлен!', 'success')
+
+            return redirect('/user/products')
+
+        else:
+            flash('Ошибки при заполнении', 'danger')
+
+    return render_template('add_product.html', form=form, title_text='Добавить новый товар', product_id=0)
 
 
 @app.route('/user/products/edit/<int:product_id>', methods=['GET', "POST"])
@@ -177,17 +207,16 @@ def edit_product(product_id):
         form.open.data = product.open
         form.submit.label.text = 'Изменить товар'
 
-        return render_template('add_product.html', form=form)
-
     else:
         if form.validate_on_submit():
 
             image_file = form.image.data  # Получаем файл из формы
-            filename = product.filename.data
+            filename = product.image
 
             if image_file:  # Если файл был загружен
-                os.remove(filename)  # удаляем старый файл
-                filename = secure_filename(image_file.filename)  # Безопасное имя файла
+                if filename:  # если на продукте есть изображение удаляем его
+                    os.remove(f'static/upload/{filename}')  # удаляем старый файл
+                filename = set_filename_image(image_file)
                 upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
                 image_file.save(os.path.join(upload_folder, filename))  # Сохраняем файл
 
@@ -196,10 +225,34 @@ def edit_product(product_id):
             product.description = form.description.data
             product.amount_available = form.amount_available.data
             product.open = form.open.data
+            product.image = filename
 
             db_sess.commit()
             flash('Товар успешно изменен!', 'success')
             return redirect('/user/products')
+        else:
+            flash('Ошибка при заполнении', 'danger')
+
+    return render_template('add_product.html', form=form, title_text='Редактирование товара', product_id=product_id)
+
+
+@app.route('/user/product/delete/<int:product_id>')
+@login_required
+def delete_product(product_id):
+    # если продукт ид == 0, то значит это ещё не созданный продукт и мы просто перенаправим пользователя
+    if product_id == 0:
+        flash('Отмена создания товара', 'warning')
+        return redirect('/user/products')
+    else:
+        db_sess = db_session.create_session()
+        product = db_sess.query(Product).filter(and_(
+            product_id == Product.id,
+            Product.user_id == current_user.id
+        )).first()
+        db_sess.delete(product)
+        db_sess.commit()
+        flash('Товар успешно удалён!', 'warning')
+        return redirect('/user/products')
 
 
 # Новые маршруты для профиля пользователя
@@ -478,4 +531,4 @@ def user_orders():
 
 if __name__ == '__main__':
     db_session.global_init('db/online_store.db')
-    app.run()
+    app.run(debug=True)
