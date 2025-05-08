@@ -255,6 +255,13 @@ def delete_product(product_id):
         return redirect('/user/products')
 
 
+@app.route('/products/<int:product_id>')
+def show_product(product_id):
+    db_sess = db_session.create_session()
+    product = db_sess.query(Product).filter(Product.id == product_id).first()
+    return render_template('product.html', product=product)
+
+
 # Новые маршруты для профиля пользователя
 
 @app.route('/user/profile', methods=['GET', 'POST'])
