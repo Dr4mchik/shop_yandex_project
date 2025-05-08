@@ -214,7 +214,7 @@ def edit_product(product_id):
             filename = product.image
 
             if image_file:  # Если файл был загружен
-                if filename:  # если на продукте есть изображение удаляем его
+                if filename and filename in os.listdir('static/upload/'):  # если на продукте есть изображение удаляем его
                     os.remove(f'static/upload/{filename}')  # удаляем старый файл
                 filename = set_filename_image(image_file)
                 upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
