@@ -74,7 +74,7 @@ def home():
         products = query.filter(Product.name.ilike(f'%{search}%')).all()
     else:
         products = query.all()
-    return render_template('all_products.html', products=products)
+    return render_template('show_products.html', products=products, button_name='В корзину', link_button='add_cart')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -134,8 +134,17 @@ def login():
 @app.route('/user/products')
 @login_required
 def user_products():
-    products = current_user.products
-    return render_template('user_products.html', products=products)
+    db_sess = db_session.create_session()
+    search = request.args.get('search', '')
+    # выбираем товары которые октрыты
+    query = db_sess.query(Product).filter(and_(Product.open == True, Product.user_id == current_user.id))
+    if search:
+        # если пользователь что-то ищёт, будем искать совпадение в названии товара
+        products = query.filter(Product.name.ilike(f'%{search}%')).all()
+    else:
+        products = query.all()
+    return render_template('show_products.html', products=products, button_name='Редактировать',
+                           link_button='edit_product')
 
 
 @app.route('/user/products/add', methods=['POST', "GET"])
@@ -214,7 +223,8 @@ def edit_product(product_id):
             filename = product.image
 
             if image_file:  # Если файл был загружен
-                if filename and filename in os.listdir('static/upload/'):  # если на продукте есть изображение удаляем его
+                if filename and filename in os.listdir(
+                        'static/upload/'):  # если на продукте есть изображение удаляем его
                     os.remove(f'static/upload/{filename}')  # удаляем старый файл
                 filename = set_filename_image(image_file)
                 upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
@@ -387,6 +397,7 @@ def cart_update(product_id):
 @app.route('/user/cart/delete/<int:product_id>')
 @login_required
 def cart_delete(product_id):
+    """Удаляет из корзины пользователя продукт"""
     db_sess = db_session.create_session()
     order_item = db_sess.query(OrderItem).filter(OrderItem.id == product_id).first()
     if not order_item:
@@ -408,7 +419,7 @@ def checkout():
     # Получаем все товары из корзины
     cart_items = db_sess.query(OrderItem).filter(
         OrderItem.user_id == current_user.id,
-        OrderItem.is_in_order == False
+        # OrderItem.is_in_order == False
     ).all()
 
     # Если корзина пуста, перенаправляем на страницу корзины
@@ -490,7 +501,11 @@ def checkout():
                 user = db_sess.query(User).get(current_user.id)
                 user.balance -= order_total
 
+            # Удаляем корзину пользователя
+            db_sess.query(OrderItem).filter(current_user.id == OrderItem.user_id).delete()
+
             db_sess.commit()
+
             flash('Заказ успешно оформлен!', 'success')
 
             # Перенаправляем на страницу заказов или страницу с деталями заказа
