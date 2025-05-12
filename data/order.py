@@ -9,6 +9,7 @@ class OrderItem(SqlAlchemyBase):
     __tablename__ = 'order_items'
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    # id пользователя который заказывает
     user_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("users.id"))
     product_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("products.id"))
     amount = sqlalchemy.Column(sqlalchemy.Integer, default=1)

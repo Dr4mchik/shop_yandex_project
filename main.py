@@ -342,7 +342,8 @@ def add_cart(product_id):
     # проверим на наличие такого же товара в корзине
     # проверяем совпадение по пользователю (его корзина) и по продукту
     order_item = db_sess.query(OrderItem).filter(
-        and_(OrderItem.product_id == product_id, OrderItem.user_id == current_user.id)).first()
+        and_(OrderItem.product_id == product_id, OrderItem.user_id == current_user.id, OrderItem.is_in_order == False)
+    ).first()
     if order_item:
         # если такой товар есть в корзине
         if order_item.product.amount_available >= order_item.amount + 1:
@@ -366,7 +367,9 @@ def add_cart(product_id):
 @login_required
 def cart():
     db_sess = db_session.create_session()
-    order_item = db_sess.query(OrderItem).filter(current_user.id == OrderItem.user_id).all()
+    order_item = db_sess.query(OrderItem).filter(
+        and_(current_user.id == OrderItem.user_id, OrderItem.is_in_order == False)
+    ).all()
     product_amount_sum = sum([i.amount for i in order_item])
     product_price_sum = sum([i.amount * i.product.price for i in order_item])
     return render_template('cart.html', products=order_item,
@@ -408,6 +411,18 @@ def cart_delete(product_id):
     return redirect('/user/cart')
 
 
+@app.route('/user/products/orders')
+@login_required
+def show_user_products_order():
+    """Показывает, что у пользователя заказали"""
+    db_sess = db_session.create_session()
+    all_order_items = db_sess.query(OrderItem).filter(OrderItem.is_in_order == True).all()
+
+    order_items = [order_item for order_item in all_order_items if order_item.product.user_id == current_user.id]
+
+    return render_template('user_products_orders.html', order_items=order_items, title='Заказы ваших товаров')
+
+
 @app.route('/user/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
@@ -419,7 +434,7 @@ def checkout():
     # Получаем все товары из корзины
     cart_items = db_sess.query(OrderItem).filter(
         OrderItem.user_id == current_user.id,
-        # OrderItem.is_in_order == False
+        OrderItem.is_in_order == False
     ).all()
 
     # Если корзина пуста, перенаправляем на страницу корзины
@@ -500,9 +515,6 @@ def checkout():
             if form.payment_method.data == 'balance':
                 user = db_sess.query(User).get(current_user.id)
                 user.balance -= order_total
-
-            # Удаляем корзину пользователя
-            db_sess.query(OrderItem).filter(current_user.id == OrderItem.user_id).delete()
 
             db_sess.commit()
 
