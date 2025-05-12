@@ -214,7 +214,8 @@ def edit_product(product_id):
             filename = product.image
 
             if image_file:  # Если файл был загружен
-                if filename and filename in os.listdir('static/upload/'):  # если на продукте есть изображение удаляем его
+                if filename and filename in os.listdir(
+                        'static/upload/'):  # если на продукте есть изображение удаляем его
                     os.remove(f'static/upload/{filename}')  # удаляем старый файл
                 filename = set_filename_image(image_file)
                 upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
@@ -537,6 +538,53 @@ def user_orders():
     return render_template('orders.html', orders=orders)
 
 
+def register_payment_routes(app):
+    @app.route('/user/order/pay/<int:order_id>', methods=['GET', 'POST'])
+    @login_required
+    def pay_order(order_id):
+        db_sess = db_session.create_session()
+        order = db_sess.query(Order).filter(
+            Order.id == order_id,
+            Order.user_id == current_user.id,
+            Order.is_paid == False
+        ).first()
+
+        if not order:
+            flash('Заказ не найден или уже оплачен', 'danger')
+            return redirect('/user/orders')
+
+        if request.method == 'POST':
+            # Получаем данные карты из формы
+            card_number = request.form.get('card_number')
+            card_expiry = request.form.get('card_expiry')
+            card_cvv = request.form.get('card_cvv')
+
+            # Простейшая валидация (в реальном приложении должна быть расширенная)
+            if not (card_number and card_expiry and card_cvv):
+                flash('Пожалуйста, заполните все поля', 'danger')
+                return render_template('pay_order.html', order=order)
+
+            try:
+                # В реальном приложении здесь был бы вызов платежного шлюза
+                # Для демонстрации просто помечаем заказ как оплаченный
+                order.is_paid = True
+                order.status = 'paid'
+                order.payment_date = datetime.datetime.now()
+
+                db_sess.commit()
+                flash('Заказ успешно оплачен!', 'success')
+                return redirect('/user/orders')
+
+            except Exception as e:
+                db_sess.rollback()
+                flash(f'Ошибка при оплате: {str(e)}', 'danger')
+
+        return render_template('pay_order.html', order=order)
+
+    return pay_order
+
+
 if __name__ == '__main__':
     db_session.global_init('db/online_store.db')
+    register_payment_routes(app)
     app.run(debug=True)

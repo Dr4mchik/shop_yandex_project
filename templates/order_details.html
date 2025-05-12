@@ -200,7 +200,7 @@
                 </div>
                 <div class="card-body">
                     {% if not order.is_paid and order.status != 'cancelled' %}
-                    <a href="#" class="btn btn-success w-100 mb-2">
+                    <a href="/user/order/pay/{{ order.id }}" class="btn btn-success w-100 mb-2">
                         <i class="bi bi-credit-card"></i> Оплатить заказ
                     </a>
                     {% endif %}

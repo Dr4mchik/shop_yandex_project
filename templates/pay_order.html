@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0">Оплата заказа #{{ order.id }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <p><strong>Сумма к оплате:</strong> {{ order.total_price }}₽</p>
+                        <hr>
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="card_number" class="form-label">Номер карты</label>
+                                <input type="text" class="form-control" id="card_number" name="card_number"
+                                       placeholder="XXXX XXXX XXXX XXXX" required
+                                       pattern="\d{4}\s\d{4}\s\d{4}\s\d{4}">
+                                <small class="form-text text-muted">Введите номер карты в формате XXXX XXXX XXXX XXXX</small>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="card_expiry" class="form-label">Срок действия</label>
+                                    <input type="text" class="form-control" id="card_expiry" name="card_expiry"
+                                           placeholder="ММ/ГГ" required
+                                           pattern="(0[1-9]|1[0-2])\/\d{2}">
+                                    <small class="form-text text-muted">Введите в формате ММ/ГГ</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="card_cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="card_cvv" name="card_cvv"
+                                           placeholder="XXX" required
+                                           pattern="\d{3}">
+                                    <small class="form-text text-muted">3 цифры с обратной стороны карты</small>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-credit-card"></i> Оплатить {{ order.total_price }}₽
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+
+                    <div class="text-center mt-3">
+                        <a href="/user/orders" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Вернуться к списку заказов
+                        </a>
+                    </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Форматирование номера карты
+    const cardNumberInput = document.getElementById('card_number');
+    cardNumberInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        let formattedValue = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+        e.target.value = formattedValue;
+    });
+
+    // Форматирование даты истечения карты
+    const cardExpiryInput = document.getElementById('card_expiry');
+    cardExpiryInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 2) {
+            value = value.slice(0, 2) + '/' + value.slice(2);
+        }
+        e.target.value = value;
+    });
+});
+</script>
+{% endblock %}
