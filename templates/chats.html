@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Мои чаты</h2>
+
+            {% if chats %}
+            <div class="list-group">
+                {% for order in chats %}
+                <a href="/user/chat/{{ order.id }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">
+                            {% if order.user_id == current_user.id %}
+                                Чат с продавцом {% if order.items %}{{ order.items[0].product.user.name }} {{ order.items[0].product.user.surname }}{% endif %}
+                            {% else %}
+                                Чат с покупателем {{ order.user.name }} {{ order.user.surname }}
+                            {% endif %}
+                        </h5>
+                        <small class="text-muted">Заказ №{{ order.id }}</small>
+                    </div>
+                    <p class="mb-1">
+                        {% if order.items %}
+                            Товар: {{ order.items[0].product.name }}
+                        {% endif %}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">{{ order.created_date.strftime('%d.%m.%Y %H:%M') }}</small>
+                        <span class="badge bg-primary rounded-pill">{{ order.status }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+                <p>У вас пока нет активных чатов</p>
+                <a href="/" class="btn btn-primary">Начать покупки</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .list-group-item {
+        transition: all 0.3s ease;
+    }
+    .list-group-item:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

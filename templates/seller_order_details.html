@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <h1>Информация о заказе #{{ order.id }}</h1>
+        <a href="{{ url_for('seller_orders') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку заказов
+        </a>
+    </div>
+
+    <!-- Order Status -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Статус заказа</h5>
+            <span class="badge 
+                {% if order.status == 'new' %}bg-secondary
+                {% elif order.status == 'paid' %}bg-info
+                {% elif order.status == 'processing' %}bg-primary
+                {% elif order.status == 'shipped' %}bg-warning text-dark
+                {% elif order.status == 'delivered' %}bg-success
+                {% elif order.status == 'completed' %}bg-success
+                {% elif order.status == 'cancelled' %}bg-danger
+                {% elif order.status == 'returned' %}bg-danger
+                {% else %}bg-dark{% endif %}">
+                {{ order.get_status_display() }}
+            </span>
+        </div>
+        <div class="card-body">
+            <!-- Status change buttons -->
+            {% if order.get_available_status_changes(current_user) %}
+                <div class="mb-3">
+                    {% for next_status in order.get_available_status_changes(current_user) %}
+                        <button class="btn btn-sm 
+                            {% if next_status == 'processing' %}btn-outline-primary
+                            {% elif next_status == 'shipped' %}btn-outline-warning
+                            {% elif next_status == 'delivered' %}btn-outline-success
+                            {% elif next_status == 'completed' %}btn-outline-success
+                            {% elif next_status == 'cancelled' %}btn-outline-danger
+                            {% elif next_status == 'returned' %}btn-outline-danger
+                            {% else %}btn-outline-secondary{% endif %}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#statusChangeModal"
+                            data-order-id="{{ order.id }}"
+                            data-status="{{ next_status }}">
+                            {% if next_status == 'processing' %}
+                                <i class="bi bi-gear"></i> Начать обработку
+                            {% elif next_status == 'shipped' %}
+                                <i class="bi bi-truck"></i> Отправить заказ
+                            {% elif next_status == 'delivered' %}
+                                <i class="bi bi-box"></i> Отметить как доставленный
+                            {% elif next_status == 'completed' %}
+                                <i class="bi bi-check-circle"></i> Завершить заказ
+                            {% elif next_status == 'cancelled' %}
+                                <i class="bi bi-x-circle"></i> Отменить заказ
+                            {% elif next_status == 'returned' %}
+                                <i class="bi bi-arrow-counterclockwise"></i> Оформить возврат
+                            {% endif %}
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Status History -->
+            <h6>История изменений статуса:</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Статус</th>
+                            <th>Пользователь</th>
+                            <th>Комментарий</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for history in order.status_history %}
+                        <tr>
+                            <td>{{ history.timestamp.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if history.status == 'new' %}bg-secondary
+                                    {% elif history.status == 'paid' %}bg-info
+                                    {% elif history.status == 'processing' %}bg-primary
+                                    {% elif history.status == 'shipped' %}bg-warning text-dark
+                                    {% elif history.status == 'delivered' %}bg-success
+                                    {% elif history.status == 'completed' %}bg-success
+                                    {% elif history.status == 'cancelled' %}bg-danger
+                                    {% elif history.status == 'returned' %}bg-danger
+                                    {% else %}bg-dark{% endif %}">
+                                    {{ history.get_status_display() }}
+                                </span>
+                            </td>
+                            <td>{{ history.user.name }} {{ history.user.surname }}</td>
+                            <td>
+                                {% if history.comment %}
+                                    {{ history.comment|replace('\n', '<br>')|safe }}
+                                {% else %}
+                                    <em>Без комментария</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Order Details & Customer Info -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Информация о заказе</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Дата заказа:</strong> {{ order.created_date.strftime('%d.%m.%Y %H:%M') }}</p>
+                    <p><strong>Покупатель:</strong> {{ order.name }} {{ order.surname }}</p>
+                    <p><strong>Email:</strong> {{ order.email }}</p>
+                    {% if order.phone %}
+                        <p><strong>Телефон:</strong> {{ order.phone }}</p>
+                    {% endif %}
+                    <p><strong>Способ оплаты:</strong> 
+                        {% if order.payment_method == 'balance' %}
+                            Оплата с баланса
+                        {% elif order.payment_method == 'card' %}
+                            Оплата картой
+                        {% elif order.payment_method == 'cash' %}
+                            Наличными при получении
+                        {% else %}
+                            {{ order.payment_method }}
+                        {% endif %}
+                    </p>
+                    <p><strong>Статус оплаты:</strong> 
+                        {% if order.is_paid %}
+                            <span class="badge bg-success">Оплачен</span>
+                            {% if order.payment_date %}
+                                <small>({{ order.payment_date.strftime('%d.%m.%Y %H:%M') }})</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-danger">Не оплачен</span>
+                        {% endif %}
+                    </p>
+                    {% if order.comment %}
+                        <p><strong>Комментарий к заказу:</strong><br>{{ order.comment }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Info -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Информация о доставке</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Способ доставки:</strong> 
+                        {% if order.delivery_type == 'pickup_point' %}
+                            Пункт выдачи заказов
+                        {% elif order.delivery_type == 'courier' %}
+                            Курьером
+                        {% else %}
+                            {{ order.delivery_type }}
+                        {% endif %}
+                    </p>
+                    
+                    {% if order.delivery_service %}
+                        <p><strong>Служба доставки:</strong> {{ order.delivery_service }}</p>
+                    {% endif %}
+                    
+                    {% if order.pvz_info %}
+                        <p><strong>Адрес пункта выдачи:</strong><br>{{ order.pvz_info }}</p>
+                    {% endif %}
+                    
+                    {% if order.delivery_cost %}
+                        <p><strong>Стоимость доставки:</strong> {{ order.delivery_cost }} ₽</p>
+                    {% endif %}
+                    
+                    <!-- Shipping tracking info from status history -->
+                    {% set shipping_info = [] %}
+                    {% for history in order.status_history %}
+                        {% if history.status == 'shipped' and history.comment and 'Трек-номер:' in history.comment %}
+                            {% set shipping_info = shipping_info + [history] %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if shipping_info %}
+                        {% set latest = shipping_info[0] %}
+                        <div class="alert alert-info">
+                            <h6>Информация об отправлении:</h6>
+                            {{ latest.comment|nl2br }}
+                            <div class="mt-2">
+                                <small class="text-muted">Обновлено: {{ latest.timestamp.strftime('%d.%m.%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Товары в заказе (товары продавца)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Товар</th>
+                            <th>Цена</th>
+                            <th>Количество</th>
+                            <th>Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in seller_items %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if item.product.image %}
+                                        <img src="/static/upload/{{ item.product.image }}" alt="{{ item.product.name }}" 
+                                             class="img-thumbnail me-2" style="max-width: 50px; max-height: 50px;">
+                                    {% endif %}
+                                    <a href="/products/{{ item.product.id }}">{{ item.product.name }}</a>
+                                </div>
+                            </td>
+                            <td>{{ item.product.price }} ₽</td>
+                            <td>{{ item.amount }}</td>
+                            <td>{{ item.product.price * item.amount }} ₽</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3">Итого (только ваши товары):</th>
+                            <th>{{ seller_total }} ₽</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Communication with buyer -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Сообщения по заказу</h5>
+            <a href="{{ url_for('user_chat', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-chat-dots"></i> Перейти в чат
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for status change -->
+<div class="modal fade" id="statusChangeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('update_order_status') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusChangeModalLabel">Изменение статуса заказа</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="order_id" id="modalOrderId">
+                    <input type="hidden" name="status" id="modalStatus">
+
+                    <div class="mb-3">
+                        <label for="statusComment" class="form-label">Комментарий (опционально):</label>
+                        <textarea class="form-control" id="statusComment" name="comment" rows="3"></textarea>
+                    </div>
+
+                    <div id="shippingInfoFields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="trackingNumber" class="form-label">Трек-номер отправления:</label>
+                            <input type="text" class="form-control" id="trackingNumber" name="tracking_number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="shippingService" class="form-label">Служба доставки:</label>
+                            <select class="form-select" id="shippingService" name="shipping_service">
+                                <option value="Почта России">Почта России</option>
+                                <option value="СДЭК">СДЭК</option>
+                                <option value="DHL">DHL</option>
+                                <option value="ПЭК">ПЭК</option>
+                                <option value="Яндекс Доставка">Яндекс Доставка</option>
+                                <option value="Другое">Другое</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize the status change modal with proper data
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusChangeModal = document.getElementById('statusChangeModal');
+        if (statusChangeModal) {
+            statusChangeModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const orderId = button.getAttribute('data-order-id');
+                const status = button.getAttribute('data-status');
+
+                document.getElementById('modalOrderId').value = orderId;
+                document.getElementById('modalStatus').value = status;
+
+                // Show/hide shipping info fields when status is 'shipped'
+                if (status === 'shipped') {
+                    document.getElementById('shippingInfoFields').style.display = 'block';
+                } else {
+                    document.getElementById('shippingInfoFields').style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

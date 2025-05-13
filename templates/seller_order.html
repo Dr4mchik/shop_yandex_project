@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Управление заказами (для продавца)</h1>
+
+    <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab">
+                Активные заказы
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                Завершенные заказы
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cancelled-tab" data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab">
+                Отмененные заказы
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="orderTabsContent">
+        <div class="tab-pane fade show active" id="active" role="tabpanel">
+            {% set active_orders = orders|selectattr('status', 'in', ['new', 'paid', 'processing', 'shipped', 'delivered'])|list %}
+            {% if active_orders %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>№ Заказа</th>
+                                <th>Дата</th>
+                                <th>Покупатель</th>
+                                <th>Товары</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in active_orders %}
+                            <tr>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.created_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>{{ order.user.name }} {{ order.user.surname }}</td>
+                                <td>
+                                    <ul class="list-unstyled">
+                                        {% for item in order.items %}
+                                            {% if item.product.user_id == current_user.id %}
+                                                <li><strong>{{ item.product.name }}</strong> x {{ item.amount }}</li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                                <td>{{ order.total_price }} ₽</td>
+                                <td>
+                                    <span class="badge
+                                        {% if order.status == 'new' %}bg-secondary
+                                        {% elif order.status == 'paid' %}bg-info
+                                        {% elif order.status == 'processing' %}bg-primary
+                                        {% elif order.status == 'shipped' %}bg-warning
+                                        {% elif order.status == 'delivered' %}bg-success
+                                        {% else %}bg-dark{% endif %}">
+                                        {{ order.get_status_display() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('seller_order_details', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> Подробнее
+                                        </a>
+                                        {% if order.get_available_status_changes(current_user) %}
+                                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                                <span class="visually-hidden">Toggle Dropdown</span>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                {% for next_status in order.get_available_status_changes(current_user) %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="#"
+                                                           data-bs-toggle="modal"
+                                                           data-bs-target="#statusChangeModal"
+                                                           data-order-id="{{ order.id }}"
+                                                           data-status="{{ next_status }}">
+                                                            {% if next_status == 'processing' %}
+                                                                Начать обработку
+                                                            {% elif next_status == 'shipped' %}
+                                                                Отправить заказ
+                                                            {% elif next_status == 'delivered' %}
+                                                                Отметить как доставленный
+                                                            {% elif next_status == 'completed' %}
+                                                                Завершить заказ
+                                                            {% elif next_status == 'cancelled' %}
+                                                                Отменить заказ
+                                                            {% elif next_status == 'returned' %}
+                                                                Оформить возврат
+                                                            {% endif %}
+                                                        </a>
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">У вас нет активных заказов.</div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="completed" role="tabpanel">
+            {% set completed_orders = orders|selectattr('status', 'equalto', 'completed')|list %}
+            {% if completed_orders %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <!-- Similar structure as active orders but for completed orders -->
+                        <thead>
+                            <tr>
+                                <th>№ Заказа</th>
+                                <th>Дата</th>
+                                <th>Покупатель</th>
+                                <th>Товары</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in completed_orders %}
+                            <tr>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.created_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>{{ order.user.name }} {{ order.user.surname }}</td>
+                                <td>
+                                    <ul class="list-unstyled">
+                                        {% for item in order.items %}
+                                            {% if item.product.user_id == current_user.id %}
+                                                <li><strong>{{ item.product.name }}</strong> x {{ item.amount }}</li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                                <td>{{ order.total_price }} ₽</td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        {{ order.get_status_display() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('seller_order_details', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Подробнее
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">У вас нет завершенных заказов.</div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="cancelled" role="tabpanel">
+            {% set cancelled_orders = orders|selectattr('status', 'in', ['cancelled', 'returned'])|list %}
+            {% if cancelled_orders %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <!-- Similar structure as active orders but for cancelled/returned orders -->
+                        <thead>
+                            <tr>
+                                <th>№ Заказа</th>
+                                <th>Дата</th>
+                                <th>Покупатель</th>
+                                <th>Товары</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in cancelled_orders %}
+                            <tr>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.created_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>{{ order.user.name }} {{ order.user.surname }}</td>
+                                <td>
+                                    <ul class="list-unstyled">
+                                        {% for item in order.items %}
+                                            {% if item.product.user_id == current_user.id %}
+                                                <li><strong>{{ item.product.name }}</strong> x {{ item.amount }}</li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                                <td>{{ order.total_price }} ₽</td>
+                                <td>
+                                    <span class="badge bg-danger">
+                                        {{ order.get_status_display() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('seller_order_details', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Подробнее
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">У вас нет отмененных заказов.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal for status change -->
+<div class="modal fade" id="statusChangeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('update_order_status') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusChangeModalLabel">Изменение статуса заказа</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="order_id" id="modalOrderId">
+                    <input type="hidden" name="status" id="modalStatus">
+
+                    <div class="mb-3">
+                        <label for="statusComment" class="form-label">Комментарий (опционально):</label>
+                        <textarea class="form-control" id="statusComment" name="comment" rows="3"></textarea>
+                    </div>
+
+                    <div id="shippingInfoFields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="trackingNumber" class="form-label">Трек-номер отправления:</label>
+                            <input type="text" class="form-control" id="trackingNumber" name="tracking_number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="shippingService" class="form-label">Служба доставки:</label>
+                            <select class="form-select" id="shippingService" name="shipping_service">
+                                <option value="Почта России">Почта России</option>
+                                <option value="СДЭК">СДЭК</option>
+                                <option value="DHL">DHL</option>
+                                <option value="ПЭК">ПЭК</option>
+                                <option value="Яндекс Доставка">Яндекс Доставка</option>
+                                <option value="Другое">Другое</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize the status change modal with proper data
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusChangeModal = document.getElementById('statusChangeModal');
+        if (statusChangeModal) {
+            statusChangeModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const orderId = button.getAttribute('data-order-id');
+                const status = button.getAttribute('data-status');
+
+                document.getElementById('modalOrderId').value = orderId;
+                document.getElementById('modalStatus').value = status;
+
+                // Show/hide shipping info fields when status is 'shipped'
+                if (status === 'shipped') {
+                    document.getElementById('shippingInfoFields').style.display = 'block';
+                } else {
+                    document.getElementById('shippingInfoFields').style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
