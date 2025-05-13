@@ -106,14 +106,11 @@ class Order(SqlAlchemyBase):
         return OrderStatus.get_buyer_viewable_statuses().get(self.status, self.status)
 
     def get_available_status_changes(self, user):
-        """Returns available status changes for a user based on their role"""
-        # Check if this user is the seller of any items in this order
         is_seller = any(item.product.user_id == user.id for item in self.items)
 
         if is_seller:
             return OrderStatus.get_seller_status_actions().get(self.status, [])
 
-        # Could add buyer-specific status changes here if needed
         return []
 
 

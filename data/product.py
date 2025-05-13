@@ -15,7 +15,6 @@ class Product(SqlAlchemyBase):
     open = sqlalchemy.Column(sqlalchemy.Boolean)  # открыт ли продукт для общего доступа
     amount_available = sqlalchemy.Column(sqlalchemy.Integer)  # сколько есть продукта для продажи
     amount_sell = sqlalchemy.Column(sqlalchemy.Integer)  # сколько продано для статистики
-    # amount_order = sqlalchemy.Column(sqlalchemy.Integer)  # сколько продуктов заказало пользователей
 
     image = sqlalchemy.Column(sqlalchemy.String)
 

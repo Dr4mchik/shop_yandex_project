@@ -44,5 +44,4 @@ class CheckoutForm(FlaskForm):
     card_expiry = StringField('Срок действия')
     card_cvv = StringField('CVV')
 
-    # Комментарий
     comment = TextAreaField('Комментарий к заказу')

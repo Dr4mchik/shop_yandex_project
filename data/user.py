@@ -18,7 +18,7 @@ class User(SqlAlchemyBase, UserMixin):
     # Добавляем поле баланса пользователя с дефолтным значением 0
     balance = Column(Float, default=0.0, nullable=False)
 
-    # Связь с продуктами (уже была в исходном коде)
+    # Связь с продуктами
     products = relationship("Product", back_populates="user")
 
     def set_password(self, password):

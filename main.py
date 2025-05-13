@@ -475,14 +475,11 @@ def register_payment_routes(app):
             card_expiry = request.form.get('card_expiry')
             card_cvv = request.form.get('card_cvv')
 
-            # Простейшая валидация (в реальном приложении должна быть расширенная)
             if not (card_number and card_expiry and card_cvv):
                 flash('Пожалуйста, заполните все поля', 'danger')
                 return render_template('pay_order.html', order=order)
 
             try:
-                # В реальном приложении здесь был бы вызов платежного шлюза
-                # Для демонстрации просто помечаем заказ как оплаченный
                 order.is_paid = True
                 order.status = 'paid'
                 order.payment_date = datetime.datetime.now()
@@ -540,7 +537,7 @@ def contact_seller(product_id):
             db_sess.add(chat_order)
             db_sess.flush()  # Чтобы получить ID заказа
 
-            # Добавляем товар в этот заказ (с нулевым количеством, только для связи)
+            # Добавляем товар в этот заказ
             order_item = OrderItem(
                 product_id=product_id,
                 user_id=current_user.id,
