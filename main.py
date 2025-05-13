@@ -24,6 +24,9 @@ from form.profileform import ProfileForm
 from form.balanceform import BalanceForm
 from form.checkout_form import CheckoutForm
 
+# api
+from api import products_api, users_api, orders_api
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 app.config['UPLOAD_FOLDER'] = 'static/upload'
@@ -112,7 +115,7 @@ def register():
         db_sess.commit()
 
         # перенаправляем пользователя на главную страницу
-        flash('Пользователь успешно создан! Можете авторизоваться.')
+        flash('Пользователь успешно создан! Можете авторизоваться.', 'access')
 
         return redirect('/')
     return render_template('register.html', title='Регистрация', form=form)
@@ -987,4 +990,7 @@ if __name__ == '__main__':
     db_session.global_init('db/online_store.db')
     register_payment_routes(app)
     register_seller_routes(app)
+    app.register_blueprint(products_api.blueprint)
+    app.register_blueprint(users_api.blueprint)
+    app.register_blueprint(orders_api.blueprint)
     app.run(debug=True)

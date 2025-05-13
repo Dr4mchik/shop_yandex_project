@@ -1,9 +1,10 @@
 import datetime
 from .db_session import SqlAlchemyBase
 import sqlalchemy
+from sqlalchemy_serializer import SerializerMixin
 
 
-class Product(SqlAlchemyBase):
+class Product(SqlAlchemyBase, SerializerMixin):
     """модель товара"""
     __tablename__ = 'products'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)

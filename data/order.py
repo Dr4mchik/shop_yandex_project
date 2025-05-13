@@ -2,6 +2,7 @@ import datetime
 import sqlalchemy
 from sqlalchemy import orm
 from flask_login import current_user
+from sqlalchemy_serializer import SerializerMixin
 
 from .db_session import SqlAlchemyBase
 
@@ -46,7 +47,7 @@ class OrderStatus:
         }
 
 
-class OrderItem(SqlAlchemyBase):
+class OrderItem(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'order_items'
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
@@ -61,7 +62,7 @@ class OrderItem(SqlAlchemyBase):
     order = orm.relationship('Order', back_populates='items')
 
 
-class Order(SqlAlchemyBase):
+class Order(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'orders'
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
