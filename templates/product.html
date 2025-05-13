@@ -1,63 +1,96 @@
+```html
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container my-5">
+<div class="container">
     <div class="row">
-        <!-- Изображение товара -->
-        <div class="col-md-6">
-            {% if product.image %}
-                <img src="{{ url_for('static', filename='upload/' + product.image) }}"
-                     alt="{{ product.name }}"
-                     class="img-fluid rounded shadow-sm">
-            {% else %}
-                <div class="bg-secondary text-white d-flex align-items-center justify-content-center"
-                     style="height: 400px; border-radius: .25rem;">
-                    <span class="fs-4">Изображение отсутствует</span>
+        <div class="col-md-8 offset-md-2">
+            <div class="card product-detail">
+                <div class="row g-0">
+                    <div class="col-md-5">
+                        {% if product.image %}
+                        <img src="{{ url_for('static', filename='upload/' + product.image) }}"
+                             class="img-fluid rounded product-full-image"
+                             alt="{{ product.name }}">
+                        {% else %}
+                        <div class="no-image-large">Нет изображения</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card-body">
+                            <h3 class="card-title">{{ product.name }}</h3>
+                            <p class="card-text product-description">{{ product.description }}</p>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="h2 text-success">{{ product.price }} ₽</span>
+                                {% if product.amount_available and product.amount_available > 0 %}
+                                    <span class="badge bg-success fs-6">В наличии: {{ product.amount_available }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">Нет в наличии</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <div class="seller-info">
+                                    <p>Продавец: {{ product.user.name }} {{ product.user.surname }}</p>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                {% if product.amount_available and product.amount_available > 0 %}
+                                <a href="/user/add_cart/{{ product.id }}" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-cart-plus"></i> В корзину
+                                </a>
+                                {% endif %}
+                                
+                                {% if current_user.is_authenticated and current_user.id != product.user_id %}
+                                <a href="/user/contact_seller/{{ product.id }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-chat-dots"></i> Связаться с продавцом
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            {% endif %}
-        </div>
-
-        <!-- Информация о товаре -->
-        <div class="col-md-6">
-            <h1 class="mb-3">{{ product.name }}</h1>
-
-            <h3 class="text-success mb-3">{{ product.price }} ₽</h3>
-
-            {% if product.open %}
-            <span class="badge bg-success mb-3">Открытый товар</span>
-            {% else %}
-            <span class="badge bg-danger mb-3">Закрытый товар</span>
-            {% endif %}
-
-            <p class="mb-4">{{ product.description or "Описание отсутствует." }}</p>
-
-            <ul class="list-group mb-4">
-                <li class="list-group-item">
-                    <strong>В наличии:</strong>
-                    {% if product.amount_available and product.amount_available > 0 %}
-                    {{ product.amount_available }} ед.
-                    {% else %}
-                    <span class="text-danger">Нет в наличии</span>
-                    {% endif %}
-                </li>
-                <li class="list-group-item">
-                    <strong>Продано:</strong> {{ product.amount_sell or 0 }} ед.
-                </li>
-                <li class="list-group-item">
-                    <strong>Дата добавления:</strong> {{ product.created_date.strftime('%d.%m.%Y %H:%M') if
-                    product.created_date else '-' }}
-                </li>
-            </ul>
-
-            <!-- Кнопка купить (пример, можно заменить на вашу логику) -->
-            {% if product.amount_available and product.amount_available > 0 and product.open %}
-            <a href="{{ url_for('add_cart', product_id=product.id) }}" class="btn btn-primary btn-lg">
-                В корзину
-            </a>
-            {% else %}
-            <button class="btn btn-secondary btn-lg">Нет в наличии</button>
-            {% endif %}
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
+
+{% block styles %}
+<style>
+    .product-detail {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .product-full-image {
+        max-height: 400px;
+        width: 100%;
+        object-fit: cover;
+    }
+    
+    .no-image-large {
+        height: 400px;
+        background-color: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        font-size: 20px;
+    }
+    
+    .product-description {
+        min-height: 100px;
+        margin-bottom: 20px;
+    }
+    
+    .seller-info {
+        font-size: 14px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+```

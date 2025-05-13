@@ -1,6 +1,6 @@
 from flask import Flask, render_template, redirect, request, abort, flash
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from werkzeug.utils import secure_filename
 import datetime
 import os
@@ -11,10 +11,12 @@ from data import db_session
 # импортируем модели
 from data.user import User
 from data.product import Product
-from data.order import OrderItem
+from data.order import OrderItem, OrderStatus, OrderStatusHistory
 from data.order import Order
+from data.massage import Message
 
 # импортируем формы
+from form.massage_form import MessageForm
 from form.user_registration import RegistrationForm
 from form.user_login import LoginForm
 from form.product import ProductForm
@@ -422,118 +424,6 @@ def show_user_products_order():
 
     return render_template('user_products_orders.html', order_items=order_items, title='Заказы ваших товаров')
 
-
-@app.route('/user/checkout', methods=['GET', 'POST'])
-@login_required
-def checkout():
-    """Обработчик страницы оформления заказа"""
-    form = CheckoutForm()
-
-    db_sess = db_session.create_session()
-
-    # Получаем все товары из корзины
-    cart_items = db_sess.query(OrderItem).filter(
-        OrderItem.user_id == current_user.id,
-        OrderItem.is_in_order == False
-    ).all()
-
-    # Если корзина пуста, перенаправляем на страницу корзины
-    if not cart_items:
-        flash('Ваша корзина пуста', 'warning')
-        return redirect('/user/cart')
-
-    # Вычисляем сумму товаров и их количество
-    product_amount_sum = sum([item.amount for item in cart_items])
-    product_price_sum = sum([item.amount * item.product.price for item in cart_items])
-
-    # Предзаполняем форму данными пользователя
-    if request.method == 'GET':
-        form.name.data = current_user.name
-        form.surname.data = current_user.surname
-        form.email.data = current_user.email
-
-    if form.validate_on_submit():
-        # Определяем стоимость доставки
-        delivery_cost = 0
-        if request.method == 'POST' and form.delivery_type.data == 'pickup_point':
-            delivery_cost = 150  # Базовая стоимость доставки в ПВЗ
-
-        # Общая сумма заказа с учетом доставки
-        order_total = product_price_sum + delivery_cost
-
-        # Проверяем достаточно ли средств на балансе при оплате с баланса
-        if form.payment_method.data == 'balance' and current_user.balance < order_total:
-            flash('Недостаточно средств на балансе', 'danger')
-            return render_template('checkout.html',
-                                   form=form,
-                                   products=cart_items,
-                                   product_amount_sum=product_amount_sum,
-                                   product_price_sum=product_price_sum,
-                                   order_total=order_total)
-
-        try:
-            # Создаем заказ
-            order = Order(
-                user_id=current_user.id,
-                created_date=datetime.datetime.now(),
-                status='new',
-                total_price=order_total,
-
-                # Контактная информация
-                name=form.name.data,
-                surname=form.surname.data,
-                email=form.email.data,
-                phone=form.phone.data,
-
-                # Доставка
-                delivery_type=form.delivery_type.data,
-                delivery_service=form.delivery_service.data if form.delivery_type.data == 'pickup_point' else None,
-                pvz_info=form.selected_pvz.data if form.delivery_type.data == 'pickup_point' else None,
-                delivery_cost=delivery_cost,
-
-                # Оплата
-                payment_method=form.payment_method.data,
-                is_paid=form.payment_method.data == 'balance',  # Оплачено сразу, если с баланса
-                payment_date=datetime.datetime.now() if form.payment_method.data == 'balance' else None,
-
-                # Комментарий
-                comment=form.comment.data
-            )
-
-            db_sess.add(order)
-            db_sess.flush()  # Получаем ID заказа
-
-            # Добавляем товары из корзины в заказ
-            for item in cart_items:
-                item.is_in_order = True
-                item.order_id = order.id
-
-                # Уменьшаем количество доступных товаров
-                item.product.amount_available -= item.amount
-
-            # Если оплата с баланса, списываем средства
-            if form.payment_method.data == 'balance':
-                user = db_sess.query(User).get(current_user.id)
-                user.balance -= order_total
-
-            db_sess.commit()
-
-            flash('Заказ успешно оформлен!', 'success')
-
-            # Перенаправляем на страницу заказов или страницу с деталями заказа
-            return redirect(f'/user/order/{order.id}')
-
-        except Exception as e:
-            db_sess.rollback()
-            flash(f'Произошла ошибка: {str(e)}', 'danger')
-
-    return render_template('checkout.html', form=form,
-                           products=cart_items,
-                           product_amount_sum=product_amount_sum,
-                           product_price_sum=product_price_sum,
-                           order_total=product_price_sum)
-
-
 @app.route('/user/order/<int:order_id>')
 @login_required
 def user_order_details(order_id):
@@ -609,8 +499,495 @@ def register_payment_routes(app):
 
     return pay_order
 
+@app.route('/user/contact_seller/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def contact_seller(product_id):
+    """Страница для начала общения с продавцом товара"""
+    db_sess = db_session.create_session()
+    product = db_sess.query(Product).filter(Product.id == product_id).first()
+
+    if not product:
+        flash('Товар не найден', 'danger')
+        return redirect('/')
+
+    # Проверяем, что пользователь не пытается написать сам себе
+    if product.user_id == current_user.id:
+        flash('Вы не можете отправить сообщение самому себе', 'warning')
+        return redirect(f'/products/{product_id}')
+
+    form = MessageForm()
+
+    if form.validate_on_submit():
+        # Проверяем, есть ли уже существующий заказ с этим товаром для чата
+        existing_order = db_sess.query(Order).filter(
+            Order.user_id == current_user.id,
+            Order.status == 'chat_only',
+            Order.items.any(OrderItem.product_id == product_id)
+        ).first()
+
+        if not existing_order:
+            # Создаем специальный заказ для чата, если его еще нет
+            chat_order = Order(
+                user_id=current_user.id,
+                created_date=datetime.datetime.now(),
+                status='chat_only',  # Специальный статус для чатов, не являющихся реальными заказами
+                total_price=0,  # Нулевая цена, так как это только чат
+                name=current_user.name,
+                surname=current_user.surname,
+                email=current_user.email
+            )
+
+            db_sess.add(chat_order)
+            db_sess.flush()  # Чтобы получить ID заказа
+
+            # Добавляем товар в этот заказ (с нулевым количеством, только для связи)
+            order_item = OrderItem(
+                product_id=product_id,
+                user_id=current_user.id,
+                order_id=chat_order.id,
+                amount=0,  # Нулевое количество, так как товар не покупается
+                is_in_order=True  # Помечаем как часть заказа
+            )
+
+            db_sess.add(order_item)
+            order_id = chat_order.id
+        else:
+            order_id = existing_order.id
+
+        # Создаем сообщение
+        message = Message(
+            sender_id=current_user.id,
+            recipient_id=product.user_id,
+            order_id=order_id
+        )
+
+        # Обрабатываем текст и изображение
+        if form.text.data:
+            message.text = form.text.data
+
+        image_file = form.image.data
+        if image_file:
+            filename = set_filename_image(image_file)
+            upload_folder = app.config['UPLOAD_FOLDER']
+            image_file.save(os.path.join(upload_folder, filename))
+            message.image = filename
+
+        db_sess.add(message)
+        db_sess.commit()
+
+        flash('Сообщение отправлено продавцу!', 'success')
+        return redirect(f'/user/chat/{order_id}')
+
+    return render_template('contact_seller.html', product=product, form=form)
+
+
+# Обновить маршрут оформления заказа для исправления проблемы списания средств
+@app.route('/user/checkout', methods=['GET', 'POST'])
+@login_required
+def checkout():
+    """Обработчик страницы оформления заказа"""
+    form = CheckoutForm()
+
+    db_sess = db_session.create_session()
+
+    # Получаем все товары из корзины
+    cart_items = db_sess.query(OrderItem).filter(
+        OrderItem.user_id == current_user.id,
+        OrderItem.is_in_order == False
+    ).all()
+
+    # Если корзина пуста, перенаправляем на страницу корзины
+    if not cart_items:
+        flash('Ваша корзина пуста', 'warning')
+        return redirect('/user/cart')
+
+    # Вычисляем сумму товаров и их количество
+    product_amount_sum = sum([item.amount for item in cart_items])
+    product_price_sum = sum([item.amount * item.product.price for item in cart_items])
+
+    # Предзаполняем форму данными пользователя
+    if request.method == 'GET':
+        form.name.data = current_user.name
+        form.surname.data = current_user.surname
+        form.email.data = current_user.email
+
+    if form.validate_on_submit():
+        # Определяем стоимость доставки
+        delivery_cost = 0
+        if form.delivery_type.data == 'pickup_point':
+            delivery_cost = 150  # Базовая стоимость доставки в ПВЗ
+
+        # Общая сумма заказа с учетом доставки
+        order_total = product_price_sum + delivery_cost
+
+        # Проверяем достаточно ли средств на балансе при оплате с баланса
+        if form.payment_method.data == 'balance' and current_user.balance < order_total:
+            flash('Недостаточно средств на балансе', 'danger')
+            return render_template('checkout.html',
+                                   form=form,
+                                   products=cart_items,
+                                   product_amount_sum=product_amount_sum,
+                                   product_price_sum=product_price_sum,
+                                   order_total=order_total)
+
+        try:
+            # Создаем заказ
+            order = Order(
+                user_id=current_user.id,
+                created_date=datetime.datetime.now(),
+                status='new',
+                total_price=order_total,
+
+                # Контактная информация
+                name=form.name.data,
+                surname=form.surname.data,
+                email=form.email.data,
+                phone=form.phone.data,
+
+                # Доставка
+                delivery_type=form.delivery_type.data,
+                delivery_service=form.delivery_service.data if form.delivery_type.data == 'pickup_point' else None,
+                pvz_info=form.selected_pvz.data if form.delivery_type.data == 'pickup_point' else None,
+                delivery_cost=delivery_cost,
+
+                # Оплата
+                payment_method=form.payment_method.data,
+                is_paid=form.payment_method.data == 'balance',  # Оплачено сразу, если с баланса
+                payment_date=datetime.datetime.now() if form.payment_method.data == 'balance' else None,
+
+                # Комментарий
+                comment=form.comment.data
+            )
+
+            db_sess.add(order)
+            db_sess.flush()  # Получаем ID заказа
+
+            # Добавляем товары из корзины в заказ и уменьшаем доступное количество
+            for item in cart_items:
+                item.is_in_order = True
+                item.order_id = order.id
+
+                # Уменьшаем количество доступных товаров
+                product = db_sess.query(Product).get(item.product_id)
+                if product.amount_available < item.amount:
+                    db_sess.rollback()
+                    flash(f'Недостаточное количество товара {product.name}', 'danger')
+                    return redirect('/user/cart')
+
+                product.amount_available -= item.amount
+
+            # Если оплата с баланса, списываем средства
+            if form.payment_method.data == 'balance':
+                user = db_sess.query(User).get(current_user.id)
+                if user.balance < order_total:
+                    db_sess.rollback()
+                    flash('Недостаточно средств на балансе', 'danger')
+                    return redirect('/user/cart')
+
+                user.balance -= order_total
+                order.status = 'paid'  # Сразу помечаем как оплаченный
+
+            db_sess.commit()
+            flash('Заказ успешно оформлен!', 'success')
+
+            # Перенаправляем на страницу с деталями заказа
+            return redirect(f'/user/order/{order.id}')
+
+        except Exception as e:
+            db_sess.rollback()
+            flash(f'Произошла ошибка: {str(e)}', 'danger')
+
+    return render_template('checkout.html', form=form,
+                           products=cart_items,
+                           product_amount_sum=product_amount_sum,
+                           product_price_sum=product_price_sum,
+                           order_total=product_price_sum + (150 if request.method == 'POST' and
+                                                                   form.delivery_type.data == 'pickup_point' else 0))
+
+
+def register_seller_routes(app):
+    @app.route('/seller/orders')
+    @login_required
+    def seller_orders():
+        """Страница со списком заказов для продавца"""
+        db_sess = db_session.create_session()
+
+        # Находим все заказы, содержащие товары данного продавца
+        # Используем distinct() чтобы избежать дублирования заказов
+        seller_orders = db_sess.query(Order).join(OrderItem).join(Product).filter(
+            Product.user_id == current_user.id,
+            Order.status != OrderStatus.CHAT_ONLY  # Исключаем "только чат" записи
+        ).distinct().order_by(Order.created_date.desc()).all()
+
+        return render_template('seller_order.html', orders=seller_orders)
+
+    @app.route('/seller/order/<int:order_id>')
+    @login_required
+    def seller_order_details(order_id):
+        """Страница с подробной информацией о заказе для продавца"""
+        db_sess = db_session.create_session()
+
+        # Проверяем, содержит ли заказ товары данного продавца
+        order = db_sess.query(Order).filter(
+            Order.id == order_id,
+            Order.items.any(OrderItem.product.has(Product.user_id == current_user.id))
+        ).first()
+
+        if not order:
+            flash('Заказ не найден или у вас нет доступа к этому заказу', 'danger')
+            return redirect('/seller/orders')
+
+        # Находим только те товары в заказе, которые принадлежат данному продавцу
+        seller_items = [item for item in order.items if item.product.user_id == current_user.id]
+
+        # Рассчитываем сумму только для товаров этого продавца
+        seller_total = sum(item.product.price * item.amount for item in seller_items)
+
+        return render_template('seller_order_details.html',
+                               order=order,
+                               seller_items=seller_items,
+                               seller_total=seller_total)
+
+    @app.route('/update_order_status', methods=['POST'])
+    @login_required
+    def update_order_status():
+        """Обработчик изменения статуса заказа продавцом"""
+        if request.method != 'POST':
+            return redirect('/seller/orders')
+
+        order_id = request.form.get('order_id', type=int)
+        new_status = request.form.get('status')
+        comment = request.form.get('comment', '')
+
+        if not order_id or not new_status:
+            flash('Неверные параметры', 'danger')
+            return redirect('/seller/orders')
+
+        db_sess = db_session.create_session()
+
+        # Проверяем, содержит ли заказ товары данного продавца
+        order = db_sess.query(Order).filter(
+            Order.id == order_id,
+            Order.items.any(OrderItem.product.has(Product.user_id == current_user.id))
+        ).first()
+
+        if not order:
+            flash('Заказ не найден или у вас нет доступа к этому заказу', 'danger')
+            return redirect('/seller/orders')
+
+        # Проверяем, доступен ли данный переход статуса для этого заказа
+        available_statuses = order.get_available_status_changes(current_user)
+        if new_status not in available_statuses:
+            flash('Недопустимое изменение статуса', 'danger')
+            return redirect(f'/seller/order/{order_id}')
+
+        # Обновляем статус заказа
+        old_status = order.status
+        order.status = new_status
+
+        # Если заказ был отправлен, сохраняем информацию о доставке
+        if new_status == OrderStatus.SHIPPED:
+            tracking_number = request.form.get('tracking_number', '')
+            shipping_service = request.form.get('shipping_service', '')
+
+            # Сохраняем информацию о доставке в комментарии к изменению статуса
+            if tracking_number:
+                comment += f"\nТрек-номер: {tracking_number}"
+            if shipping_service:
+                comment += f"\nСлужба доставки: {shipping_service}"
+
+        # Создаем запись в истории статусов
+        status_history = OrderStatusHistory(
+            order_id=order.id,
+            status=new_status,
+            comment=comment,
+            user_id=current_user.id,
+            timestamp=datetime.datetime.now()
+        )
+
+        db_sess.add(status_history)
+
+        # Особая логика для разных статусов
+        if new_status == OrderStatus.COMPLETED:
+            # Если статус "Завершен", переводим средства продавцу
+            if not order.balance_transferred and order.is_paid:
+                # Находим продавца и переводим ему деньги
+                # Вычисляем сумму только для товаров данного продавца
+                seller_items = [item for item in order.items if item.product.user_id == current_user.id]
+                seller_total = sum(item.product.price * item.amount for item in seller_items)
+
+                # Распределяем доставку пропорционально стоимости товаров продавца
+                order_total_without_delivery = order.total_price - order.delivery_cost
+                if order_total_without_delivery > 0:
+                    seller_share = seller_total / order_total_without_delivery
+                    delivery_share = order.delivery_cost * seller_share
+                else:
+                    delivery_share = 0
+
+                # Финальная сумма к переводу
+                transfer_amount = seller_total - delivery_share
+
+                # Переводим деньги продавцу
+                user = db_sess.query(User).get(current_user.id)
+                user.balance += transfer_amount
+
+                # Отмечаем, что средства переведены
+                # В реальном приложении здесь должна быть более сложная логика для разных продавцов
+                if all(item.product.user_id == current_user.id for item in order.items):
+                    order.balance_transferred = True
+
+                comment += f"\nСредства в размере {transfer_amount:.2f}₽ переведены продавцу."
+
+        elif new_status == OrderStatus.CANCELLED or new_status == OrderStatus.RETURNED:
+            # Если заказ отменен или возвращен, возвращаем товары на склад
+            for item in order.items:
+                if item.product.user_id == current_user.id:
+                    product = db_sess.query(Product).get(item.product_id)
+                    product.amount_available += item.amount
+
+        db_sess.commit()
+
+        flash(
+            f'Статус заказа изменен с "{OrderStatus.get_buyer_viewable_statuses().get(old_status)}" на "{OrderStatus.get_buyer_viewable_statuses().get(new_status)}"',
+            'success')
+        return redirect(f'/seller/order/{order_id}')
+
+    return seller_orders, seller_order_details, update_order_status
+
+@app.route('/user/chats')
+@login_required
+def user_chats():
+    """Список чатов пользователя"""
+    db_sess = db_session.create_session()
+
+    # Находим все активные чаты с учетом роли пользователя (продавец/покупатель)
+    chats = db_sess.query(Order).filter(
+        or_(
+            Order.user_id == current_user.id,  # Чаты, где пользователь покупатель
+            Order.items.any(Product.user_id == current_user.id)  # Чаты, где пользователь продавец
+        )
+    ).order_by(Order.created_date.desc()).all()
+
+    return render_template('chats.html', chats=chats)
+
+
+@app.route('/user/chat/<int:order_id>', methods=['GET', 'POST'])
+@login_required
+def user_chat(order_id):
+    """Страница чата по определенному заказу"""
+    db_sess = db_session.create_session()
+
+    # Проверяем права доступа к чату
+    order = db_sess.query(Order).filter(
+        Order.id == order_id,
+        or_(
+            Order.user_id == current_user.id,  # Пользователь - покупатель
+            Order.items.any(Product.user_id == current_user.id)  # Пользователь - продавец
+        )
+    ).first()
+
+    if not order:
+        flash('У вас нет доступа к этому чату', 'danger')
+        return redirect('/user/chats')
+
+    # Определяем собеседника
+    if order.user_id == current_user.id:
+        # Если текущий пользователь - покупатель
+        chat_partner = order.items[0].product.user
+    else:
+        # Если текущий пользователь - продавец
+        chat_partner = order.user
+
+    # Получаем все сообщения для этого заказа
+    messages = db_sess.query(Message).filter(
+        Message.order_id == order_id
+    ).order_by(Message.timestamp).all()
+
+    # Форма для отправки сообщений
+    form = MessageForm()
+
+    if form.validate_on_submit():
+        # Обработка отправки сообщения
+        message = Message(
+            sender_id=current_user.id,
+            recipient_id=chat_partner.id,
+            order_id=order_id
+        )
+
+        # Сохраняем текст сообщения, если есть
+        if form.text.data:
+            message.text = form.text.data
+
+        # Обработка загрузки изображения
+        image_file = form.image.data
+        if image_file:
+            # Генерируем уникальное имя файла
+            filename = set_filename_image(image_file)
+
+            # Сохраняем файл
+            upload_folder = app.config['UPLOAD_FOLDER']
+            image_file.save(os.path.join(upload_folder, filename))
+
+            # Сохраняем путь к файлу в сообщении
+            message.image = filename
+
+        # Если нет текста и нет изображения - игнорируем
+        if message.text or message.image:
+            db_sess.add(message)
+            db_sess.commit()
+
+            flash('Сообщение отправлено', 'success')
+            return redirect(f'/user/chat/{order_id}')
+
+    return render_template('chat.html',
+                           order=order,
+                           messages=messages,
+                           form=form,
+                           chat_partner=chat_partner)
+
+
+@app.route('/user/transfer_balance/<int:order_id>')
+@login_required
+def transfer_balance(order_id):
+    """Перевод средств продавцу после успешного заказа"""
+    db_sess = db_session.create_session()
+
+    # Находим заказ
+    order = db_sess.query(Order).filter(
+        Order.id == order_id,
+        or_(
+            Order.user_id == current_user.id,  # Пользователь - покупатель
+            Order.items.any(Product.user_id == current_user.id)  # Пользователь - продавец
+        )
+    ).first()
+
+    if not order:
+        flash('Доступ запрещен', 'danger')
+        return redirect('/user/orders')
+
+    # Проверяем, что заказ оплачен и еще не была произведена передача средств
+    if order.status == 'paid' and not order.balance_transferred:
+        try:
+            # Находим продавца
+            seller = order.items[0].product.user
+
+            # Переводим деньги продавцу
+            seller.balance += order.total_price - order.delivery_cost
+            order.balance_transferred = True
+            order.status = 'completed'
+
+            db_sess.commit()
+
+            flash(f'Средства в размере {order.total_price - order.delivery_cost}₽ переведены продавцу', 'success')
+        except Exception as e:
+            db_sess.rollback()
+            flash(f'Ошибка при переводе средств: {str(e)}', 'danger')
+
+    return redirect(f'/user/order/{order_id}')
+
 
 if __name__ == '__main__':
     db_session.global_init('db/online_store.db')
     register_payment_routes(app)
+    register_seller_routes(app)
     app.run(debug=True)

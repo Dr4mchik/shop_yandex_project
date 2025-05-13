@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Каталог товаров</h1>
+<h1 class="mb-4">Каталог</h1>
 
 <!-- Форма поиска -->
 <form method="GET" action="" class="mb-4">
@@ -62,6 +62,10 @@
             Товары не найдены. Добавьте новые.
         </div>
     </div>
+    <div class="card-footer bg-transparent">
+                <a href="/user/products/add" class="btn btn-primary w-100">add</a>
+                <span></span>
+            </div>
     {% endfor %}
 </div>
 

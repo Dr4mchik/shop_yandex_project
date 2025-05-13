@@ -1,0 +1,80 @@
+```html
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Новый чат с продавцом</h2>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Товар: {{ product.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            {% if product.image %}
+                            <img src="{{ url_for('static', filename='upload/' + product.image) }}" 
+                                 class="img-fluid rounded" alt="{{ product.name }}">
+                            {% else %}
+                            <div class="no-image">Нет изображения</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-9">
+                            <h5>Продавец: {{ product.user.name }} {{ product.user.surname }}</h5>
+                            <p>{{ product.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h4 text-success">{{ product.price }} ₽</span>
+                                {% if product.amount_available > 0 %}
+                                <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
+                                {% else %}
+                                <span class="badge bg-danger">Нет в наличии</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Напишите сообщение продавцу</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.text.label(class="form-label") }}
+                            {{ form.text(class="form-control", rows="5", placeholder="Здравствуйте! Хотел бы уточнить детали о товаре...") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.image.label(class="form-label") }}
+                            {{ form.image(class="form-control") }}
+                            <div class="form-text">Вы можете прикрепить изображение к сообщению.</div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('show_product', product_id=product.id) }}" class="btn btn-secondary">Отмена</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .no-image {
+        height: 150px;
+        background-color: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+    }
+</style>
+{% endblock %}
+```
