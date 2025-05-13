@@ -74,7 +74,7 @@ def home():
         products = query.filter(Product.name.ilike(f'%{search}%')).all()
     else:
         products = query.all()
-    return render_template('all_products.html', products=products)
+    return render_template('show_products.html', products=products, button_name='В корзину', link_button='add_cart')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -134,8 +134,17 @@ def login():
 @app.route('/user/products')
 @login_required
 def user_products():
-    products = current_user.products
-    return render_template('user_products.html', products=products)
+    db_sess = db_session.create_session()
+    search = request.args.get('search', '')
+    # выбираем товары которые октрыты
+    query = db_sess.query(Product).filter(and_(Product.open == True, Product.user_id == current_user.id))
+    if search:
+        # если пользователь что-то ищёт, будем искать совпадение в названии товара
+        products = query.filter(Product.name.ilike(f'%{search}%')).all()
+    else:
+        products = query.all()
+    return render_template('show_products.html', products=products, button_name='Редактировать',
+                           link_button='edit_product')
 
 
 @app.route('/user/products/add', methods=['POST', "GET"])
@@ -333,7 +342,8 @@ def add_cart(product_id):
     # проверим на наличие такого же товара в корзине
     # проверяем совпадение по пользователю (его корзина) и по продукту
     order_item = db_sess.query(OrderItem).filter(
-        and_(OrderItem.product_id == product_id, OrderItem.user_id == current_user.id)).first()
+        and_(OrderItem.product_id == product_id, OrderItem.user_id == current_user.id, OrderItem.is_in_order == False)
+    ).first()
     if order_item:
         # если такой товар есть в корзине
         if order_item.product.amount_available >= order_item.amount + 1:
@@ -357,7 +367,9 @@ def add_cart(product_id):
 @login_required
 def cart():
     db_sess = db_session.create_session()
-    order_item = db_sess.query(OrderItem).filter(current_user.id == OrderItem.user_id).all()
+    order_item = db_sess.query(OrderItem).filter(
+        and_(current_user.id == OrderItem.user_id, OrderItem.is_in_order == False)
+    ).all()
     product_amount_sum = sum([i.amount for i in order_item])
     product_price_sum = sum([i.amount * i.product.price for i in order_item])
     return render_template('cart.html', products=order_item,
@@ -388,6 +400,7 @@ def cart_update(product_id):
 @app.route('/user/cart/delete/<int:product_id>')
 @login_required
 def cart_delete(product_id):
+    """Удаляет из корзины пользователя продукт"""
     db_sess = db_session.create_session()
     order_item = db_sess.query(OrderItem).filter(OrderItem.id == product_id).first()
     if not order_item:
@@ -396,6 +409,18 @@ def cart_delete(product_id):
     db_sess.delete(order_item)
     db_sess.commit()
     return redirect('/user/cart')
+
+
+@app.route('/user/products/orders')
+@login_required
+def show_user_products_order():
+    """Показывает, что у пользователя заказали"""
+    db_sess = db_session.create_session()
+    all_order_items = db_sess.query(OrderItem).filter(OrderItem.is_in_order == True).all()
+
+    order_items = [order_item for order_item in all_order_items if order_item.product.user_id == current_user.id]
+
+    return render_template('user_products_orders.html', order_items=order_items, title='Заказы ваших товаров')
 
 
 @app.route('/user/checkout', methods=['GET', 'POST'])
@@ -492,6 +517,7 @@ def checkout():
                 user.balance -= order_total
 
             db_sess.commit()
+
             flash('Заказ успешно оформлен!', 'success')
 
             # Перенаправляем на страницу заказов или страницу с деталями заказа
