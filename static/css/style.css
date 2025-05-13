@@ -1,5 +1,25 @@
 /* Изображения для карточек товара */
 
+.add_product_href{
+      color: blue;
+      font-family: helvetica;
+      text-decoration: none;
+    }
+
+.add_product_href:hover {
+  text-decoration: underline;
+}
+
+.add_product_href:active {
+  color: black;
+}
+
+.add_product_href:visited {
+  color: blue;
+}
+
+
+
 .product-image {
     width: 100%;          /* ширина по ширине карточки */
     height: 250px;        /* фиксированная высота (можно подстроить под ваш дизайн) */

@@ -159,8 +159,8 @@
                     <p><strong>Способ доставки:</strong> 
                         {% if order.delivery_type == 'pickup_point' %}
                             Пункт выдачи заказов
-                        {% elif order.delivery_type == 'courier' %}
-                            Курьером
+                        {% elif order.delivery_type == 'pickup_point' %}
+                            Самовывоз
                         {% else %}
                             {{ order.delivery_type }}
                         {% endif %}
@@ -288,7 +288,7 @@
                                 <option value="DHL">DHL</option>
                                 <option value="ПЭК">ПЭК</option>
                                 <option value="Яндекс Доставка">Яндекс Доставка</option>
-                                <option value="Другое">Другое</option>
+                                <option value="Другое">Самовывоз</option>
                             </select>
                         </div>
                     </div>

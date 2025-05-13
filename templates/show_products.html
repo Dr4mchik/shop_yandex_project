@@ -59,13 +59,9 @@
     {% else %}
     <div class="col-12">
         <div class="alert alert-warning">
-            Товары не найдены. Добавьте новые.
+            Товары не найдены. <a class="add_product_href" href="/user/products/add"> Добавьте новые.</a>
         </div>
     </div>
-    <div class="card-footer bg-transparent">
-                <a href="/user/products/add" class="btn btn-primary w-100">add</a>
-                <span></span>
-            </div>
     {% endfor %}
 </div>
 
