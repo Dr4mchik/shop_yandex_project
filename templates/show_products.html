@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Каталог</h1>
-
+<h1 class="mb-4">{% if edit %}Мои товары{% else %}Каталог{% endif %}</h1>
+{%if edit %}
+<a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3"><h5>Добавить товар</h5></a>
+{% endif %}
 <!-- Форма поиска -->
 <form method="GET" action="" class="mb-4">
     <div class="input-group">

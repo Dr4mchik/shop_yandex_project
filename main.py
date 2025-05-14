@@ -115,7 +115,7 @@ def register():
         db_sess.commit()
 
         # перенаправляем пользователя на главную страницу
-        flash('Пользователь успешно создан! Можете авторизоваться.', 'access')
+        flash('Пользователь успешно создан! Можете авторизоваться.', 'success')
 
         return redirect('/')
     return render_template('register.html', title='Регистрация', form=form)
@@ -142,14 +142,14 @@ def user_products():
     db_sess = db_session.create_session()
     search = request.args.get('search', '')
     # выбираем товары которые октрыты
-    query = db_sess.query(Product).filter(and_(Product.open == True, Product.user_id == current_user.id))
+    query = db_sess.query(Product).filter(Product.user_id == current_user.id)
     if search:
         # если пользователь что-то ищёт, будем искать совпадение в названии товара
         products = query.filter(Product.name.ilike(f'%{search}%')).all()
     else:
         products = query.all()
     return render_template('show_products.html', products=products, button_name='Редактировать',
-                           link_button='edit_product')
+                           link_button='edit_product', edit=1)
 
 
 @app.route('/user/products/add', methods=['POST', "GET"])
