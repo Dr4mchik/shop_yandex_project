@@ -149,15 +149,10 @@ class OrdersListResource(Resource):
         db_sess.add(order)
         db_sess.flush()
 
-
-        print('user balance ', user.balance, product_price_sum)
         user.balance -= product_price_sum
         db_sess.flush()
-        print('user balance ', user.balance, product_price_sum)
 
         for item in order_items_users:
-            print(item.product.name, end=' ')
-            print(item.product.user_id)
             item.is_in_order = True
             item.order_id = order.id
 
@@ -170,8 +165,6 @@ class OrdersListResource(Resource):
 
             # уменьшим доступный товар
             item.product.amount_available -= item.amount
-
-        print()
 
         db_sess.commit()
 
