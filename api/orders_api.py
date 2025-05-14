@@ -9,6 +9,7 @@ from sqlalchemy import and_
 from data import db_session
 from data.order import OrderItem, Order
 from data.product import Product
+from data.user import User
 
 blueprint = Blueprint('order_api', __name__, template_folder='templates')
 api = Api(blueprint)
@@ -131,7 +132,9 @@ class OrdersListResource(Resource):
 
         product_price_sum = sum([item.amount * item.product.price for item in order_items_users])
 
-        if user_id.balance < product_price_sum:
+        user = db_sess.query(User).filter(User.id == user_id).first()  # Пользователь, который покупает
+
+        if user.balance < product_price_sum:
             return make_response(jsonify({'error': f'no many for buy by user id {user_id}'}), 400)
 
         order = Order(
@@ -144,13 +147,26 @@ class OrdersListResource(Resource):
         )
 
         db_sess.add(order)
-        db_sess.commit()
+        db_sess.flush()
 
-        user_id.balance -= product_price_sum
+        user.balance -= product_price_sum
+        db_sess.flush()
 
         for item in order_items_users:
             item.is_in_order = True
             item.order_id = order.id
+
+            sum_product_price = item.sum_price()
+
+            # получим владельца товара и прибавим его баланс на сумму проданного товара
+            user_owner = db_sess.query(User).filter(User.id == item.product.user_id).first()
+            user_owner.balance += sum_product_price
+            db_sess.flush()
+
+            # уменьшим доступный товар
+            item.product.amount_available -= item.amount
+
+        db_sess.commit()
 
         return jsonify({'OK': 'success'})
 
