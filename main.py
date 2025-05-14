@@ -79,6 +79,7 @@ def home():
         products = query.filter(Product.name.ilike(f'%{search}%')).all()
     else:
         products = query.all()
+    db_sess.close()
     return render_template('show_products.html', products=products, button_name='В корзину', link_button='add_cart')
 
 
@@ -113,6 +114,7 @@ def register():
 
         db_sess.add(user)
         db_sess.commit()
+        db_sess.close()
 
         # перенаправляем пользователя на главную страницу
         flash('Пользователь успешно создан! Можете авторизоваться.', 'success')
@@ -131,6 +133,7 @@ def login():
             login_user(user, remember=form.remember_me.data)
             return redirect("/")
         message = "Неправильный логин или пароль"
+        db_sess.close()
         return render_template('login.html', message=message, form=form)
 
     return render_template('login.html', title='Login', form=form)
@@ -148,6 +151,7 @@ def user_products():
         products = query.filter(Product.name.ilike(f'%{search}%')).all()
     else:
         products = query.all()
+    db_sess.close()
     return render_template('show_products.html', products=products, button_name='Редактировать',
                            link_button='edit_product', edit=1)
 
@@ -191,6 +195,7 @@ def add_product():
             user.products.append(product)
             db_sess.merge(user)
             db_sess.commit()
+            db_sess.close()
 
             flash('Товар успешно добавлен!', 'success')
 
@@ -213,7 +218,6 @@ def edit_product(product_id):
         abort(404)
 
     if request.method == 'GET':
-
         form.name.data = product.name
         form.price.data = product.price
         form.description.data = product.description
@@ -243,11 +247,13 @@ def edit_product(product_id):
             product.image = filename
 
             db_sess.commit()
+            db_sess.close()
             flash('Товар успешно изменен!', 'success')
             return redirect('/user/products')
         else:
             flash('Ошибка при заполнении', 'danger')
 
+    db_sess.close()
     return render_template('add_product.html', form=form, title_text='Редактирование товара', product_id=product_id)
 
 
@@ -266,6 +272,7 @@ def delete_product(product_id):
         )).first()
         db_sess.delete(product)
         db_sess.commit()
+        db_sess.close()
         flash('Товар успешно удалён!', 'warning')
         return redirect('/user/products')
 
@@ -274,6 +281,7 @@ def delete_product(product_id):
 def show_product(product_id):
     db_sess = db_session.create_session()
     product = db_sess.query(Product).filter(Product.id == product_id).first()
+    db_sess.close()
     return render_template('product.html', product=product)
 
 
@@ -298,6 +306,7 @@ def profile():
         if user.email != form.email.data:
             existing_user = db_sess.query(User).filter(User.email == form.email.data).first()
             if existing_user and existing_user.id != current_user.id:
+                db_sess.close()
                 return render_template('profile.html', form=form,
                                        message='Этот email уже используется другим пользователем',
                                        message_category='danger')
@@ -312,6 +321,7 @@ def profile():
             user.set_password(form.new_password.data)
 
         db_sess.commit()
+        db_sess.close()
         return render_template('profile.html', form=form,
                                message='Профиль успешно обновлен',
                                message_category='success')
@@ -332,6 +342,7 @@ def balance():
         amount = form.amount.data
         user.balance += amount
         db_sess.commit()
+        db_sess.close()
 
         flash(f'Баланс успешно пополнен на {amount}₽', 'success')
         return redirect('/user/profile')
@@ -364,6 +375,7 @@ def add_cart(product_id):
         order_item.product_id = product_id
         db_sess.add(order_item)
     db_sess.commit()
+    db_sess.close()
     flash('Товар добавлен в корзину!', 'info')
     return redirect('/')
 
@@ -377,6 +389,7 @@ def cart():
     ).all()
     product_amount_sum = sum([i.amount for i in order_item])
     product_price_sum = sum([i.amount * i.product.price for i in order_item])
+    db_sess.close()
     return render_template('cart.html', products=order_item,
                            product_amount_sum=product_amount_sum, product_price_sum=product_price_sum)
 
@@ -387,17 +400,21 @@ def cart_update(product_id):
     db_sess = db_session.create_session()
     new_amount = request.form.get('amount', type=int)
     if new_amount is None:
+        db_sess.close()
         return redirect('/user/cart')
 
     order_item = db_sess.query(OrderItem).filter(OrderItem.product_id == product_id).first()
     if not order_item:
+        db_sess.close()
         abort(404)
 
     if new_amount < 0 or order_item.product.amount_available < new_amount:
+        db_sess.close()
         abort(400)
 
     order_item.amount = new_amount
     db_sess.commit()
+    db_sess.close()
 
     return redirect('/user/cart')
 
@@ -409,10 +426,12 @@ def cart_delete(product_id):
     db_sess = db_session.create_session()
     order_item = db_sess.query(OrderItem).filter(OrderItem.id == product_id).first()
     if not order_item:
+        db_sess.close()
         abort(404)
 
     db_sess.delete(order_item)
     db_sess.commit()
+    db_sess.close()
     return redirect('/user/cart')
 
 
@@ -425,6 +444,7 @@ def show_user_products_order():
 
     order_items = [order_item for order_item in all_order_items if order_item.product.user_id == current_user.id]
 
+    db_sess.close()
     return render_template('user_products_orders.html', order_items=order_items, title='Заказы ваших товаров')
 
 @app.route('/user/order/<int:order_id>')
@@ -436,6 +456,7 @@ def user_order_details(order_id):
         Order.id == order_id,
         Order.user_id == current_user.id
     ).first()
+    db_sess.close()
 
     if not order:
         flash('Заказ не найден', 'danger')
@@ -453,6 +474,7 @@ def user_orders():
     orders = db_sess.query(Order).filter(
         Order.user_id == current_user.id
     ).order_by(Order.created_date.desc()).all()
+    db_sess.close()
 
     return render_template('orders.html', orders=orders)
 
@@ -469,6 +491,7 @@ def register_payment_routes(app):
         ).first()
 
         if not order:
+            db_sess.close()
             flash('Заказ не найден или уже оплачен', 'danger')
             return redirect('/user/orders')
 
@@ -479,6 +502,7 @@ def register_payment_routes(app):
             card_cvv = request.form.get('card_cvv')
 
             if not (card_number and card_expiry and card_cvv):
+                db_sess.close()
                 flash('Пожалуйста, заполните все поля', 'danger')
                 return render_template('pay_order.html', order=order)
 
@@ -488,13 +512,17 @@ def register_payment_routes(app):
                 order.payment_date = datetime.datetime.now()
 
                 db_sess.commit()
+                db_sess.close()
+
                 flash('Заказ успешно оплачен!', 'success')
                 return redirect('/user/orders')
 
             except Exception as e:
                 db_sess.rollback()
+                db_sess.close()
                 flash(f'Ошибка при оплате: {str(e)}', 'danger')
 
+        db_sess.close()
         return render_template('pay_order.html', order=order)
 
     return pay_order
@@ -507,11 +535,13 @@ def contact_seller(product_id):
     product = db_sess.query(Product).filter(Product.id == product_id).first()
 
     if not product:
+        db_sess.close()
         flash('Товар не найден', 'danger')
         return redirect('/')
 
     # Проверяем, что пользователь не пытается написать сам себе
     if product.user_id == current_user.id:
+        db_sess.close()
         flash('Вы не можете отправить сообщение самому себе', 'warning')
         return redirect(f'/products/{product_id}')
 
@@ -574,6 +604,7 @@ def contact_seller(product_id):
 
         db_sess.add(message)
         db_sess.commit()
+        db_sess.close()
 
         flash('Сообщение отправлено продавцу!', 'success')
         return redirect(f'/user/chat/{order_id}')
@@ -598,6 +629,7 @@ def checkout():
 
     # Если корзина пуста, перенаправляем на страницу корзины
     if not cart_items:
+        db_sess.close()
         flash('Ваша корзина пуста', 'warning')
         return redirect('/user/cart')
 
@@ -622,6 +654,7 @@ def checkout():
 
         # Проверяем достаточно ли средств на балансе при оплате с баланса
         if form.payment_method.data == 'balance' and current_user.balance < order_total:
+            db_sess.close()
             flash('Недостаточно средств на балансе', 'danger')
             return render_template('checkout.html',
                                    form=form,
@@ -671,6 +704,7 @@ def checkout():
                 product = db_sess.query(Product).get(item.product_id)
                 if product.amount_available < item.amount:
                     db_sess.rollback()
+                    db_sess.close()
                     flash(f'Недостаточное количество товара {product.name}', 'danger')
                     return redirect('/user/cart')
 
@@ -681,6 +715,7 @@ def checkout():
                 user = db_sess.query(User).get(current_user.id)
                 if user.balance < order_total:
                     db_sess.rollback()
+                    db_sess.close()
                     flash('Недостаточно средств на балансе', 'danger')
                     return redirect('/user/cart')
 
@@ -688,6 +723,7 @@ def checkout():
                 order.status = 'paid'  # Сразу помечаем как оплаченный
 
             db_sess.commit()
+            db_sess.close()
             flash('Заказ успешно оформлен!', 'success')
 
             # Перенаправляем на страницу с деталями заказа
@@ -695,6 +731,7 @@ def checkout():
 
         except Exception as e:
             db_sess.rollback()
+            db_sess.close()
             flash(f'Произошла ошибка: {str(e)}', 'danger')
 
     return render_template('checkout.html', form=form,
@@ -719,6 +756,8 @@ def register_seller_routes(app):
             Order.status != OrderStatus.CHAT_ONLY  # Исключаем "только чат" записи
         ).distinct().order_by(Order.created_date.desc()).all()
 
+        db_sess.close()
+
         return render_template('seller_order.html', orders=seller_orders)
 
     @app.route('/seller/order/<int:order_id>')
@@ -734,6 +773,7 @@ def register_seller_routes(app):
         ).first()
 
         if not order:
+            db_sess.close()
             flash('Заказ не найден или у вас нет доступа к этому заказу', 'danger')
             return redirect('/seller/orders')
 
@@ -743,6 +783,7 @@ def register_seller_routes(app):
         # Рассчитываем сумму только для товаров этого продавца
         seller_total = sum(item.product.price * item.amount for item in seller_items)
 
+        db_sess.close()
         return render_template('seller_order_details.html',
                                order=order,
                                seller_items=seller_items,
@@ -772,12 +813,14 @@ def register_seller_routes(app):
         ).first()
 
         if not order:
+            db_sess.close()
             flash('Заказ не найден или у вас нет доступа к этому заказу', 'danger')
             return redirect('/seller/orders')
 
         # Проверяем, доступен ли данный переход статуса для этого заказа
         available_statuses = order.get_available_status_changes(current_user)
         if new_status not in available_statuses:
+            db_sess.close()
             flash('Недопустимое изменение статуса', 'danger')
             return redirect(f'/seller/order/{order_id}')
 
@@ -846,6 +889,7 @@ def register_seller_routes(app):
                     product.amount_available += item.amount
 
         db_sess.commit()
+        db_sess.close()
 
         flash(
             f'Статус заказа изменен с "{OrderStatus.get_buyer_viewable_statuses().get(old_status)}" на "{OrderStatus.get_buyer_viewable_statuses().get(new_status)}"',
@@ -853,6 +897,7 @@ def register_seller_routes(app):
         return redirect(f'/seller/order/{order_id}')
 
     return seller_orders, seller_order_details, update_order_status
+
 
 @app.route('/user/chats')
 @login_required
@@ -867,6 +912,8 @@ def user_chats():
             Order.items.any(Product.user_id == current_user.id)  # Чаты, где пользователь продавец
         )
     ).order_by(Order.created_date.desc()).all()
+
+    db_sess.close()
 
     return render_template('chats.html', chats=chats)
 
@@ -887,6 +934,7 @@ def user_chat(order_id):
     ).first()
 
     if not order:
+        db_sess.close()
         flash('У вас нет доступа к этому чату', 'danger')
         return redirect('/user/chats')
 
@@ -935,10 +983,12 @@ def user_chat(order_id):
         if message.text or message.image:
             db_sess.add(message)
             db_sess.commit()
+            db_sess.close()
 
             flash('Сообщение отправлено', 'success')
             return redirect(f'/user/chat/{order_id}')
 
+    db_sess.close()
     return render_template('chat.html',
                            order=order,
                            messages=messages,
@@ -962,6 +1012,7 @@ def transfer_balance(order_id):
     ).first()
 
     if not order:
+        db_sess.close()
         flash('Доступ запрещен', 'danger')
         return redirect('/user/orders')
 
@@ -977,12 +1028,15 @@ def transfer_balance(order_id):
             order.status = 'completed'
 
             db_sess.commit()
+            db_sess.close()
 
             flash(f'Средства в размере {order.total_price - order.delivery_cost}₽ переведены продавцу', 'success')
         except Exception as e:
             db_sess.rollback()
+            db_sess.close()
             flash(f'Ошибка при переводе средств: {str(e)}', 'danger')
 
+    db_sess.close()
     return redirect(f'/user/order/{order_id}')
 
 
