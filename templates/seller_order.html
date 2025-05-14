@@ -36,6 +36,7 @@
                                 <th>Товары</th>
                                 <th>Сумма</th>
                                 <th>Статус</th>
+                                <th>Статус оплаты</th>
                                 <th>Действия</th>
                             </tr>
                         </thead>
@@ -65,6 +66,16 @@
                                         {% else %}bg-dark{% endif %}">
                                         {{ order.get_status_display() }}
                                     </span>
+                                </td>
+                                <td>
+                                    {% if order.is_paid %}
+                                        <span class="badge bg-success">Оплачен</span>
+                                        {% if order.payment_date %}
+                                            <small>({{ order.payment_date.strftime('%d.%m.%Y') }})</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger">Не оплачен</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group">
@@ -127,6 +138,7 @@
                                 <th>Товары</th>
                                 <th>Сумма</th>
                                 <th>Статус</th>
+                                <th>Статус оплаты</th>
                                 <th>Действия</th>
                             </tr>
                         </thead>
@@ -150,6 +162,16 @@
                                     <span class="badge bg-success">
                                         {{ order.get_status_display() }}
                                     </span>
+                                </td>
+                                <td>
+                                    {% if order.is_paid %}
+                                        <span class="badge bg-success">Оплачен</span>
+                                        {% if order.payment_date %}
+                                            <small>({{ order.payment_date.strftime('%d.%m.%Y') }})</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger">Не оплачен</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <a href="{{ url_for('seller_order_details', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
@@ -180,6 +202,7 @@
                                 <th>Товары</th>
                                 <th>Сумма</th>
                                 <th>Статус</th>
+                                <th>Статус оплаты</th>
                                 <th>Действия</th>
                             </tr>
                         </thead>
@@ -203,6 +226,16 @@
                                     <span class="badge bg-danger">
                                         {{ order.get_status_display() }}
                                     </span>
+                                </td>
+                                <td>
+                                    {% if order.is_paid %}
+                                        <span class="badge bg-success">Оплачен</span>
+                                        {% if order.payment_date %}
+                                            <small>({{ order.payment_date.strftime('%d.%m.%Y') }})</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger">Не оплачен</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <a href="{{ url_for('seller_order_details', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
