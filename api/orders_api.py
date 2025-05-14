@@ -144,6 +144,10 @@ class OrdersListResource(Resource):
             total_price=product_price_sum,
             is_paid=1,
             comment=args.get('comment', ''),
+            name=user.name,
+            surname=user.surname,
+            email=user.email,
+            payment_method='balance',
         )
 
         db_sess.add(order)
