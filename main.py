@@ -409,7 +409,6 @@ def cart():
         order_item = db_sess.query(OrderItem).filter(
             and_(current_user.id == OrderItem.user_id, OrderItem.is_in_order == False)
         ).all()
-        print(f'{order_item[0].amount=}')
         product_amount_sum = sum([i.amount for i in order_item])
         product_price_sum = sum([i.amount * i.product.price for i in order_item])
         return render_template('cart.html', products=order_item,
@@ -423,9 +422,7 @@ def cart():
 def cart_update(product_id):
     db_sess = db_session.create_session()
     try:
-        print('вход в функцию обновления')
         new_amount = request.form.get('amount', type=int)
-        print(f'{new_amount=}')
         if new_amount is None:
             return redirect('/user/cart')
 
@@ -441,9 +438,7 @@ def cart_update(product_id):
             abort(400)
 
         order_item.amount = new_amount
-        print(f'{order_item.amount=}')
         db_sess.commit()
-        print(f'{order_item.amount=}')
 
         return redirect('/user/cart')
     finally:
