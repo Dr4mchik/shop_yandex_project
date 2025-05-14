@@ -61,6 +61,9 @@ class OrderItem(SqlAlchemyBase, SerializerMixin):
     product = orm.relationship('Product')
     order = orm.relationship('Order', back_populates='items')
 
+    def sum_price(self) -> float:
+        return self.amount * self.product.price
+
 
 class Order(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'orders'
