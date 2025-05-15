@@ -64,6 +64,9 @@ class OrderItem(SqlAlchemyBase, SerializerMixin):
     def sum_price(self) -> float:
         return self.amount * self.product.price
 
+    def __repr__(self):
+        return f'Заказ {self.id}, {self.user_id}, {self.product_id}, {self.amount}, {self.is_in_order}'
+
 
 class Order(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'orders'
