@@ -18,7 +18,7 @@ class Message(SqlAlchemyBase):
     sender = relationship("User", foreign_keys=[sender_id])
     recipient = relationship("User", foreign_keys=[recipient_id])
 
-    # Связь с заказом (необязательно)
+    # Связь с заказом
     order_id = Column(Integer, ForeignKey('orders.id'), nullable=True)
     order = relationship("Order")
 
