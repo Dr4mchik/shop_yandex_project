@@ -2,69 +2,219 @@
 
 {% block content %}
 <h1 class="mb-4">{% if edit %}Мои товары{% else %}Каталог{% endif %}</h1>
-{%if edit %}
+{% if edit %}
 <a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3"><h5>Добавить товар</h5></a>
 {% endif %}
-<!-- Форма поиска -->
-<form method="GET" action="" class="mb-4">
-    <div class="input-group">
-        <input type="text" class="form-control"
-               name="search"
-               placeholder="Поиск по названию и описанию"
-               value="{{ request.args.get('search', '') }}">
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-search"></i> Искать
-        </button>
-    </div>
-</form>
 
-<!-- Список товаров -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="GET" action="" id="filter-form">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control"
+                               name="search"
+                               placeholder="Поиск по названию"
+                               value="{{ search_query }}">
+                    </div>
+                </div>
+
+                 {% if not edit %}
+                <div class="col-md-3">
+                    <select name="category_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все категории</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if current_category == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <select name="sort_by" class="form-select" onchange="this.form.submit()">
+                        <option value="default" {% if current_sort == 'default' %}selected{% endif %}>Сортировать по</option>
+                        <option value="price" {% if current_sort == 'price' %}selected{% endif %}>По цене</option>
+                        <option value="name" {% if current_sort == 'name' %}selected{% endif %}>По названию</option>
+                        <option value="date" {% if current_sort == 'date' %}selected{% endif %}>По дате</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select name="sort_order" class="form-select" onchange="this.form.submit()">
+                        <option value="asc" {% if current_order == 'asc' %}selected{% endif %}>По возрастанию</option>
+                        <option value="desc" {% if current_order == 'desc' %}selected{% endif %}>По убыванию</option>
+                    </select>
+                </div>
+
+                <div class="col-12 d-md-none">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter"></i> Применить фильтры
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not edit and (search_query or current_category or current_sort != 'default') %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+    {% if search_query %}
+    <div class="badge bg-info text-dark p-2">
+        Поиск: {{ search_query }}
+        <a href="{{ url_for(request.endpoint,
+                           sort_by=current_sort,
+                           sort_order=current_order,
+                           category_id=current_category) }}"
+           class="text-dark ms-1 text-decoration-none">✕</a>
+    </div>
+    {% endif %}
+
+    {% if current_category %}
+    <div class="badge bg-info text-dark p-2">
+        Категория: {{ categories|selectattr('id', 'eq', current_category)|map(attribute='name')|first }}
+        <a href="{{ url_for(request.endpoint,
+                           search=search_query,
+                           sort_by=current_sort,
+                           sort_order=current_order) }}"
+           class="text-dark ms-1 text-decoration-none">✕</a>
+    </div>
+    {% endif %}
+
+    {% if current_sort != 'default' %}
+    <div class="badge bg-info text-dark p-2">
+        Сортировка:
+        {% if current_sort == 'price' %}По цене{% endif %}
+        {% if current_sort == 'name' %}По названию{% endif %}
+        {% if current_sort == 'date' %}По дате{% endif %}
+        ({{ 'По возрастанию' if current_order == 'asc' else 'По убыванию' }})
+        <a href="{{ url_for(request.endpoint,
+                           search=search_query,
+                           category_id=current_category) }}"
+           class="text-dark ms-1 text-decoration-none">✕</a>
+    </div>
+    {% endif %}
+
+    <div class="ms-auto">
+        <a href="{{ url_for(request.endpoint) }}" class="btn btn-sm btn-outline-secondary">
+            Сбросить все фильтры
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="row row-cols-1 row-cols-md-3 g-4">
     {% for product in products %}
     <div class="col">
-        <div class="card h-100">
-            <a href="/products/{{ product.id }}" class="text-decoration-none text-dark ">
-                {% if product.image %}
-                <img src="{{ url_for('static', filename='upload/' + product.image) }}"
-                     class="card-img-top product-image"
-                     alt="{{ product.name }}">
-                {% else %}
-                <div class="card-img-top no-image">Нет изображения</div>
-                {% endif %}
+        <div class="card h-100 shadow-sm product-card">
+            <a href="/products/{{ product.id }}" class="text-decoration-none text-dark">
+                <div class="position-relative">
+                    {% if product.image %}
+                    <img src="{{ url_for('static', filename='upload/' + product.image) }}"
+                         class="card-img-top product-image"
+                         alt="{{ product.name }}">
+                    {% else %}
+                    <div class="card-img-top no-image d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
+                        <i class="bi bi-image fs-1 text-muted"></i>
+                    </div>
+                    {% endif %}
+
+                    {% if product.category %}
+                    <span class="position-absolute top-0 start-0 badge bg-primary m-2">{{ product.category.name }}</span>
+                    {% endif %}
+                </div>
 
                 <div class="card-body">
                     <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text">{{ product.description }}</p>
+                    <p class="card-text text-muted small">
+                        Добавлен: {{ product.created_date.strftime('%d.%m.%Y') }}
+                    </p>
+                    <p class="card-text">{{ product.description|truncate(100) }}</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="h4 text-success">{{ product.price }} ₽</span>
-                        {% if product.open %}
-                        <span class="badge bg-success">Открытый</span>
-                        {% else %}
-                        <span class="badge bg-danger">Закрытый</span>
-                        {% endif %}
+                        <span class="h4 text-success mb-0">{{ "%.2f"|format(product.price) }} ₽</span>
 
-                        {% if product.amount_available and product.amount_available > 0 %}
-                        <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
-                        {% else %}
-                        <span class="badge bg-danger">Нет в наличии</span>
-                        {% endif %}
+                        <div>
+                            {% if product.open %}
+                            <span class="badge bg-success">Открытый</span>
+                            {% else %}
+                            <span class="badge bg-danger">Закрытый</span>
+                            {% endif %}
+
+                            {% if product.amount_available and product.amount_available > 0 %}
+                            <span class="badge bg-success">В наличии: {{ product.amount_available }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">Нет в наличии</span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </a>
 
-            <div class="card-footer bg-transparent">
-                <a href="{{ url_for(link_button, product_id=product.id) }}" class="btn btn-primary w-100">{{button_name}}</a>
-                <span></span>
+            <div class="card-footer bg-transparent border-top-0 pb-3">
+                <a href="{{ url_for(link_button, product_id=product.id) }}"
+                   class="btn btn-primary w-100 {% if not product.open or product.amount_available <= 0 %}disabled{% endif %}">
+                    {{button_name}}
+                </a>
+
+                {% if not edit and product.amount_available > 0 and product.open %}
+                <a href="{{ url_for('contact_seller', product_id=product.id) }}" class="btn btn-outline-secondary w-100 mt-2">
+                    <i class="bi bi-chat-dots"></i> Связаться с продавцом
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
     {% else %}
     <div class="col-12">
         <div class="alert alert-warning">
-            Товары не найдены. <a class="add_product_href" href="/user/products/add"> Добавьте новые.</a>
+            {% if search_query or current_category %}
+            По вашему запросу ничего не найдено.
+            <a href="{{ url_for(request.endpoint) }}">Сбросить фильтры</a>
+            {% else %}
+            Товары не найдены.
+            {% if edit %}
+            <a class="add_product_href" href="/user/products/add">Добавьте новые товары.</a>
+            {% endif %}
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 </div>
 
+<style>
+    .product-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+    .product-image {
+        height: 200px;
+        object-fit: cover;
+    }
+    .no-image {
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+</style>
+
+<script>
+    // JavaScript to handle form submission when selecting filters
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listeners for all select elements in the filter form
+        const selects = document.querySelectorAll('#filter-form select');
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                document.getElementById('filter-form').submit();
+            });
+        });
+    });
+</script>
 {% endblock %}

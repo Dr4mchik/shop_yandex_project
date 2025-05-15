@@ -7,6 +7,7 @@ import os
 from PIL import Image
 
 from data import db_session
+from data.category import Category
 
 # импортируем модели
 from data.user import User
@@ -71,16 +72,43 @@ def error404(error):
 def home():
     db_sess = db_session.create_session()
     try:
-        # возьмём из аргументов в url параметр поиска, появится если пользователь что-то искал
         search = request.args.get('search', '')
-        # выбираем товары которые октрыты
+
+        sort_by = request.args.get('sort_by', 'default')
+        sort_order = request.args.get('sort_order', 'asc')
+
+        category_id = request.args.get('category_id', type=int)
+
         query = db_sess.query(Product).filter(Product.open == True)
+
+        if category_id:
+            query = query.filter(Product.category_id == category_id)
+
         if search:
-            # если пользователь что-то ищёт, будем искать совпадение в названии товара
-            products = query.filter(Product.name.ilike(f'%{search}%')).all()
+            query = query.filter(Product.name.ilike(f'%{search}%'))
+
+        if sort_by == 'price':
+            query = query.order_by(Product.price.asc() if sort_order == 'asc' else Product.price.desc())
+        elif sort_by == 'name':
+            query = query.order_by(Product.name.asc() if sort_order == 'asc' else Product.name.desc())
+        elif sort_by == 'date':
+            query = query.order_by(Product.created_date.desc() if sort_order == 'desc' else Product.created_date.asc())
         else:
-            products = query.all()
-        return render_template('show_products.html', products=products, button_name='В корзину', link_button='add_cart')
+            query = query.order_by(Product.created_date.desc())
+
+        products = query.all()
+
+        categories = db_sess.query(Category).all()
+
+        return render_template('show_products.html',
+                               products=products,
+                               button_name='В корзину',
+                               link_button='add_cart',
+                               categories=categories,
+                               current_sort=sort_by,
+                               current_order=sort_order,
+                               current_category=category_id,
+                               search_query=search)
     finally:
         db_sess.close()
 
@@ -144,6 +172,7 @@ def login():
     return render_template('login.html', title='Login', form=form)
 
 
+
 @app.route('/user/products')
 @login_required
 def user_products():
@@ -169,25 +198,22 @@ def add_product():
     form = ProductForm()
     db_sess = db_session.create_session()
     try:
+        categories = db_sess.query(Category).all()
+        form.category_id.choices = [(c.id, c.name) for c in categories]
+
         if request.method == 'POST':
-
             if form.validate_on_submit():
-
                 user = db_sess.query(User).filter(User.id == current_user.id).first()
-                image_file = form.image.data  # Получаем файл из формы
+                image_file = form.image.data
                 filename = None
 
-                if image_file:  # Если файл был загружен
-
+                if image_file:
                     image = Image.open(image_file)
                     image = image.resize((400, 400))
+                    filename = set_filename_image(image_file)
+                    upload_folder = app.config['UPLOAD_FOLDER']
+                    image.save(os.path.join(upload_folder, filename))
 
-                    filename = set_filename_image(image_file)  # Безопасное имя файла
-
-                    upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
-                    image.save(os.path.join(upload_folder, filename))  # Сохраняем файл
-
-                # создаём объект продукта
                 product = Product(
                     name=form.name.data,
                     price=form.price.data,
@@ -195,18 +221,17 @@ def add_product():
                     image=filename,
                     user_id=current_user.id,
                     open=form.open.data,
-                    amount_available=form.amount_available.data
+                    amount_available=form.amount_available.data,
+                    category_id=form.category_id.data,
+                    created_date=datetime.datetime.now()
                 )
 
-                # сохраняем его пользователю, который авторизован
                 user.products.append(product)
                 db_sess.merge(user)
                 db_sess.commit()
 
                 flash('Товар успешно добавлен!', 'success')
-
                 return redirect('/user/products')
-
             else:
                 flash('Ошибки при заполнении', 'danger')
 
@@ -221,6 +246,9 @@ def edit_product(product_id):
     form = ProductForm()
     db_sess = db_session.create_session()
     try:
+        categories = db_sess.query(Category).all()
+        form.category_id.choices = [(c.id, c.name) for c in categories]
+
         product = db_sess.query(Product).filter(
             and_(Product.id == product_id, Product.user_id == current_user.id)).first()
 
@@ -228,27 +256,24 @@ def edit_product(product_id):
             abort(404)
 
         if request.method == 'GET':
-
             form.name.data = product.name
             form.price.data = product.price
             form.description.data = product.description
             form.amount_available.data = product.amount_available
             form.open.data = product.open
+            form.category_id.data = product.category_id
             form.submit.label.text = 'Изменить товар'
-
         else:
             if form.validate_on_submit():
-
-                image_file = form.image.data  # Получаем файл из формы
+                image_file = form.image.data
                 filename = product.image
 
-                if image_file:  # Если файл был загружен
-                    if filename and filename in os.listdir(
-                            'static/upload/'):  # если на продукте есть изображение удаляем его
-                        os.remove(f'static/upload/{filename}')  # удаляем старый файл
+                if image_file:  # If a file was uploaded
+                    if filename and filename in os.listdir('static/upload/'):
+                        os.remove(f'static/upload/{filename}')
                     filename = set_filename_image(image_file)
-                    upload_folder = app.config['UPLOAD_FOLDER']  # Путь из конфига
-                    image_file.save(os.path.join(upload_folder, filename))  # Сохраняем файл
+                    upload_folder = app.config['UPLOAD_FOLDER']
+                    image_file.save(os.path.join(upload_folder, filename))
 
                 product.name = form.name.data
                 product.price = form.price.data
@@ -256,6 +281,7 @@ def edit_product(product_id):
                 product.amount_available = form.amount_available.data
                 product.open = form.open.data
                 product.image = filename
+                product.category_id = form.category_id.data
 
                 db_sess.commit()
                 flash('Товар успешно изменен!', 'success')

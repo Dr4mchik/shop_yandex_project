@@ -1,6 +1,7 @@
 import datetime
 from .db_session import SqlAlchemyBase
 import sqlalchemy
+
 from sqlalchemy_serializer import SerializerMixin
 
 
@@ -12,10 +13,13 @@ class Product(SqlAlchemyBase, SerializerMixin):
     price = sqlalchemy.Column(sqlalchemy.Float, nullable=False)
     description = sqlalchemy.Column(sqlalchemy.Text)
     created_date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
+    category_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("categories.id"), nullable=True)
+
 
     open = sqlalchemy.Column(sqlalchemy.Boolean)  # открыт ли продукт для общего доступа
     amount_available = sqlalchemy.Column(sqlalchemy.Integer)  # сколько есть продукта для продажи
     amount_sell = sqlalchemy.Column(sqlalchemy.Integer)  # сколько продано для статистики
+    category = sqlalchemy.orm.relationship('Category', back_populates="products")
 
     image = sqlalchemy.Column(sqlalchemy.String)
 
