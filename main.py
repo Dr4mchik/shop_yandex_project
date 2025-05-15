@@ -6,6 +6,8 @@ import datetime
 import os
 from PIL import Image
 
+from init_categories import initialize_categories
+
 from data import db_session
 from data.category import Category
 
@@ -1096,6 +1098,12 @@ def transfer_balance(order_id):
 
 if __name__ == '__main__':
     db_session.global_init('db/online_store.db')
+
+    db_sess = db_session.create_session()
+    category = db_sess.query(Category).first()
+    if not category:
+        initialize_categories()
+
     register_payment_routes(app)
     register_seller_routes(app)
     app.register_blueprint(products_api.blueprint)
