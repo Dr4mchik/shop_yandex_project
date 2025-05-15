@@ -48,4 +48,9 @@ print(get(f'{server}/api/orders/1').json())
 print(post(f'{server}/api/orders', json={
     'user_id': 4,
 }).json())
+
+print(put(f'{server}/api/orders/14', json={
+    'status': 'delivered'
+}).json())
+
 print(get(f'{server}/api/orders').json())

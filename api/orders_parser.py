@@ -11,3 +11,6 @@ order_item_parser.add_argument('amount', required=True, type=int)
 order_parser = reqparse.RequestParser()
 order_parser.add_argument('user_id', required=True, type=int)
 order_parser.add_argument('comment', type=str)
+
+put_order_parser = reqparse.RequestParser()
+put_order_parser.add_argument('status', required=True, type=str)

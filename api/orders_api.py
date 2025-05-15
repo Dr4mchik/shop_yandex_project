@@ -3,7 +3,7 @@ import datetime
 import flask
 from flask_restful import reqparse, abort, Api, Resource
 from flask import Blueprint, jsonify, request, make_response, url_for
-from .orders_parser import order_item_parser, put_order_item_parser, order_parser
+from .orders_parser import order_item_parser, put_order_item_parser, order_parser, put_order_parser
 from sqlalchemy import and_
 
 from data import db_session
@@ -206,6 +206,19 @@ class OrdersResource(Resource):
                 )
             }
         )
+
+    def put(self, orders_id):
+        args = put_order_parser.parse_args()
+        db_sess = db_session.create_session()
+        try:
+            orders = db_sess.query(Order).filter(Order.id == orders_id).first()
+            if not orders:
+                return make_response(jsonify({'error': f'id orders {orders_id} not found'}), 400)
+            orders.status = args['status']
+            db_sess.commit()
+            return jsonify({'ok': 'success'})
+        finally:
+            db_sess.close()
 
 
 api.add_resource(OrdersItemsListResource, '/api/orders_items/')
