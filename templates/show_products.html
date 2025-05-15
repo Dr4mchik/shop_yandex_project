@@ -112,14 +112,12 @@
             <a href="/products/{{ product.id }}" class="text-decoration-none text-dark">
                 <div class="position-relative">
                     {% if product.image %}
-                    <img src="{{ url_for('static', filename='upload/' + product.image) }}"
-                         class="card-img-top product-image"
-                         alt="{{ product.name }}">
-                    {% else %}
-                    <div class="card-img-top no-image d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
-                        <i class="bi bi-image fs-1 text-muted"></i>
-                    </div>
-                    {% endif %}
+                <img src="{{ url_for('static', filename='upload/' + product.image) }}"
+                     class="card-img-top product-image"
+                     alt="{{ product.name }}">
+                {% else %}
+                <div class="card-img-top no-image">Нет изображения</div>
+                {% endif %}
 
                     {% if product.category %}
                     <span class="position-absolute top-0 start-0 badge bg-primary m-2">{{ product.category.name }}</span>
@@ -190,18 +188,6 @@
     .product-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-    }
-    .product-image {
-        height: 200px;
-        object-fit: cover;
-    }
-    .no-image {
-        height: 200px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #f8f9fa;
-        color: #6c757d;
     }
 </style>
 
