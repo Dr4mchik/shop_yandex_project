@@ -30,6 +30,8 @@ from form.checkout_form import CheckoutForm
 # api
 from api import products_api, users_api, orders_api
 
+from waitress import serve
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 app.config['UPLOAD_FOLDER'] = 'static/upload'
@@ -1107,4 +1109,4 @@ if __name__ == '__main__':
     app.register_blueprint(products_api.blueprint)
     app.register_blueprint(users_api.blueprint)
     app.register_blueprint(orders_api.blueprint)
-    app.run(debug=True)
+    serve(app, host='0.0.0.0', port=5000)
