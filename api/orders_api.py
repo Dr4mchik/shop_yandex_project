@@ -35,6 +35,16 @@ class OrdersItemsListResource(Resource):
 
         db_sess = db_session.create_session()
         try:
+            # проверим существует ли пользователь
+            user = db_sess.query(User).filter(User.id == user_id).first()
+            if not user:
+                return make_response(jsonify({'error': f'no user by id {user_id}'}), 400)
+
+            # проверим наличие продукта
+            product = db_sess.query(Product).filter(and_(Product.id == product_id, Product.open == True)).first()
+            if not product:
+                return make_response(jsonify({'error': f'no product by id {product_id}'}), 400)
+
             # проверим на наличие такого же товара в корзине
 
             order_item_old = db_sess.query(OrderItem).filter(
@@ -136,7 +146,11 @@ class OrdersListResource(Resource):
 
             # перепроверим все ли в корзине предметы доступны, вдруг что-то закончилось
             for item in order_items_users:
-                product = db_sess.query(Product).filter(Product.id == item.product_id).first()
+                product = db_sess.query(Product).filter(and_(Product.id == item.product_id, Product.open == True)).first()
+
+                if not product:
+                    return make_response(jsonify({'error': f'not product id {item.product_id}'}), 400)
+
                 if product.amount_available < item.amount:
                     return make_response(jsonify({'error': f'not available amount product id {product.id}'}), 400)
 
@@ -146,6 +160,9 @@ class OrdersListResource(Resource):
             product_price_sum = sum([item.amount * item.product.price for item in order_items_users])
 
             user = db_sess.query(User).filter(User.id == user_id).first()  # Пользователь, который покупает
+
+            if not user:
+                return make_response(jsonify({'error': f'no user by id {user_id}'}), 400)
 
             if user.balance < product_price_sum:
                 return make_response(jsonify({'error': f'no balance many for buy by user id {user_id}'}), 400)
