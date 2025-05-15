@@ -383,7 +383,6 @@ def balance():
         if form.validate_on_submit():
             user = db_sess.query(User).get(current_user.id)
 
-            # Имитация пополнения баланса (в реальном приложении здесь была бы интеграция с платежной системой)
             amount = form.amount.data
             user.balance += amount
             db_sess.commit()
@@ -672,7 +671,6 @@ def contact_seller(product_id):
         db_sess.close()
 
 
-# Обновить маршрут оформления заказа для исправления проблемы списания средств
 @app.route('/user/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
