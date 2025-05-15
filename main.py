@@ -180,7 +180,7 @@ def add_product():
                 if image_file:  # Если файл был загружен
 
                     image = Image.open(image_file)
-                    image = image.resize((520, 520))
+                    image = image.resize((400, 400))
 
                     filename = set_filename_image(image_file)  # Безопасное имя файла
 

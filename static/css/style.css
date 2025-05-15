@@ -22,14 +22,14 @@
 
 .product-image {
     width: 100%;          /* ширина по ширине карточки */
-    height: 250px;        /* фиксированная высота (можно подстроить под ваш дизайн) */
+    height: 400px;        /* фиксированная высота (можно подстроить под ваш дизайн) */
     object-fit: cover;    /* изображение заполнит контейнер, сохраняя пропорции */
     object-position: top; /* верхняя часть изображения будет видна */
     border-radius: 0.25rem 0.25rem 0 0; /* скругление углов, как у карточки bootstrap */
 }
 
 .no-image {
-    height: 250px;
+    height: 400px;
     background: #eee;
     display: flex;
     align-items: center;
