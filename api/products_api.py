@@ -41,6 +41,7 @@ class ProductsResource(Resource):
         products = db_sess.query(Product).filter(Product.id == products_id).first()
         db_sess.delete(products)
         db_sess.commit()
+        db_sess.close()
         return jsonify({'success': 'OK'})
 
     def put(self, products_id):
