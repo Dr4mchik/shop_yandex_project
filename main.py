@@ -403,6 +403,14 @@ def add_cart(product_id):
     """Функция добавление товара в корзину товаров"""
     db_sess = db_session.create_session()
     try:
+        product = db_sess.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            flash('Вы попытались добавить не существующий товар', 'danger')
+            return redirect('/')
+        if product.amount_available == 0:
+            flash('Данного товара нет в наличии', 'warning')
+            return redirect('/')
+
         # проверим на наличие такого же товара в корзине
         # проверяем совпадение по пользователю (его корзина) и по продукту
         order_item = db_sess.query(OrderItem).filter(
@@ -435,13 +443,24 @@ def add_cart(product_id):
 def cart():
     db_sess = db_session.create_session()
     try:
-        order_item = db_sess.query(OrderItem).filter(
-            and_(current_user.id == OrderItem.user_id, OrderItem.is_in_order == False)
+        order_items = db_sess.query(OrderItem).filter(
+            and_(OrderItem.user_id == current_user.id, OrderItem.is_in_order == False)
         ).all()
-        product_amount_sum = sum([i.amount for i in order_item])
-        product_price_sum = sum([i.amount * i.product.price for i in order_item])
-        return render_template('cart.html', products=order_item,
-                               product_amount_sum=product_amount_sum, product_price_sum=product_price_sum)
+
+        # проверим что все продукты в корзине существует, иначе удалим корзину
+        if not all((db_sess.query(Product).filter(Product.id == i.product_id).first() for i in order_items)):
+            # удаление старой карзины
+            db_sess.query(OrderItem).filter(
+                and_(OrderItem.user_id == current_user.id,OrderItem.is_in_order == False)
+            ).delete(synchronize_session=False)
+            db_sess.commit()
+            flash('У вас в корзине не существующий товар! Корзина была удалена!', 'danger')
+            return redirect('/')
+
+        product_amount_sum = sum([i.amount for i in order_items])
+        product_price_sum = sum([i.amount * i.product.price for i in order_items])
+        return render_template('cart.html', products=order_items,
+                            product_amount_sum=product_amount_sum, product_price_sum=product_price_sum)
     finally:
         db_sess.close()
 
@@ -690,6 +709,11 @@ def checkout():
         # Если корзина пуста, перенаправляем на страницу корзины
         if not cart_items:
             flash('Ваша корзина пуста', 'warning')
+            return redirect('/user/cart')
+
+        # проверим что в корзине предметы доступны по количеству доступного товара
+        if not all(order_item.product.amount_available >= order_item.amount for order_item in cart_items):
+            flash('Ошибка не доступно такого кол-во товара', 'danger')
             return redirect('/user/cart')
 
         # Вычисляем сумму товаров и их количество

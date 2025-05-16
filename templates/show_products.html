@@ -152,15 +152,14 @@
 
             <div class="card-footer bg-transparent border-top-0 pb-3">
                 <a href="{{ url_for(link_button, product_id=product.id) }}"
-                   class="btn btn-primary w-100 {% if not product.open or product.amount_available <= 0 %}disabled{% endif %}">
+                   class="btn btn-primary w-100">
                     {{button_name}}
                 </a>
 
-                {% if not edit and product.amount_available > 0 and product.open %}
                 <a href="{{ url_for('contact_seller', product_id=product.id) }}" class="btn btn-outline-secondary w-100 mt-2">
                     <i class="bi bi-chat-dots"></i> Связаться с продавцом
                 </a>
-                {% endif %}
+
             </div>
         </div>
     </div>
