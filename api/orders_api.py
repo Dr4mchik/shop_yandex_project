@@ -58,7 +58,7 @@ class OrdersItemsListResource(Resource):
                     db_sess.commit()
                     return jsonify({'OK': 'success - append'})
                 else:  # превысили доступный товар
-                    return make_response(jsonify({'error': f'{args['amount'] + order_item_old.amount} not available'}),
+                    return make_response(jsonify({'error': f'{args["amount"] + order_item_old.amount} not available'}),
                                          400)
 
             order_item_new = OrderItem(
@@ -98,7 +98,7 @@ class OrdersItemsResource(Resource):
                 return make_response(jsonify({'error': f'{orders_items_id} id not found'}), 400)
 
             if orders_items.product.amount_available < args['amount']:  # нету такого кол-во товара для покупки
-                return make_response(jsonify({'error': f'{args['amount']} not available'}), 400)
+                return make_response(jsonify({'error': f'{args["amount"]} not available'}), 400)
             orders_items.amount = args['amount']
             db_sess.commit()
             return jsonify({'OK': 'success'})

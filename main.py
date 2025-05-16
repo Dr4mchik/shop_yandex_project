@@ -1103,6 +1103,7 @@ if __name__ == '__main__':
     category = db_sess.query(Category).first()
     if not category:
         initialize_categories()
+    db_sess.close()
 
     register_payment_routes(app)
     register_seller_routes(app)
